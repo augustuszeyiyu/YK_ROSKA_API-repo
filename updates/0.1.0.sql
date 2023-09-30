@@ -2,19 +2,6 @@ SET search_path TO "public";
 
 
 
--- sysvar
-DROP TABLE IF EXISTS sysvar;
-CREATE TABLE IF NOT EXISTS sysvar (
-	id                          BIGSERIAL           NOT NULL PRIMARY KEY,
-	key                         TEXT                NOT NULL,
-	value                       JSON                NOT NULL default 'null'::json
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "sysvar#key" ON "sysvar" ("key");
-
-INSERT INTO sysvar(key, value) VALUES('version', '0');
-
-
-
 -- users
 DROP TABLE IF EXISTS "users" CASCADE;
 CREATE TABLE IF NOT EXISTS "users" ( 
@@ -91,6 +78,15 @@ BEGIN
 	ELSE
 		SELECT referrer_path||NEW.uid::ltree INTO NEW.referrer_path from users WHERE uid = NEW.referrer_uid;  
 	END IF;
+
+    IF role = 'volunteer' THEN
+        NEW.volunteer_path = 'root'::ltree||NEW.uid::ltree;
+    END IF;
+
+    IF NEW.volunteer_uid IS NOT NULL THEN
+		SELECT volunteer_path||NEW.uid::ltree INTO NEW.volunteer_path from users WHERE uid = NEW.volunteer_uid;  
+	END IF;
+
 
     RETURN NEW;
 END;

@@ -60,9 +60,9 @@ Promise.chain(async()=>{
 			externalDocs: {
 				url: 'https://hackmd.io/41FuL6-NQoiRBaZ7MwXrVA',	description: 'Find more info in hackmd'
 			},
-			servers: [{
-				url: `http://${Config.serve_at.host}:${Config.serve_at.port}`,	description: "Localhost server"
-			}],
+			servers: [{url: `http://139.59.117.209`, description: "beta server"},
+					  {url: `http://${Config.serve_at.host}:${Config.serve_at.port}`,	description: "Localhost server"}
+					],
 			components: {
 				securitySchemes: {
 					cookieAuth: {
@@ -157,7 +157,7 @@ Promise.chain(async()=>{
 			// @ts-ignore
 			const [{rows:[user_info]}, {rows:[session_info]}]:[QueryResult<Pick<User, 'id'|'role'>>, QueryResult<Pick<LoginSession,'id'>>] = await PostgreFactory.query(`
 				SELECT uid, role FROM users WHERE uid = '${parsed_token.uid}' AND revoked = false;
-				SELECT id FROM login_sessions WHERE id = '${parsed_token.tid}' AND uid = '${parsed_token.uid}' AND revoked = false;
+				SELECT id, role FROM login_sessions WHERE id = '${parsed_token.tid}' AND uid = '${parsed_token.uid}' AND revoked = false;
 			`);
 
 			if ( !user_info || !session_info ) return;
@@ -179,12 +179,12 @@ Promise.chain(async()=>{
 
 
 		fastify
-		.register((await import('/routes/version.js')).default,						{prefix:'/'})
 		.register((await import('/routes/register.js')).default,					{prefix:'/'})
 		.register((await import('/routes/users.js')).default,						{prefix:'/'})
+		.register((await import('/routes/groups.js')).default,						{prefix:'/'})
 		.register((await import('/routes/auth/auth-login-session.js')).default,		{prefix:'/auth'})
 
-
+		.register((await import('/routes/version.js')).default,						{prefix:'/'})
 	}, {prefix:'/api'})
 	.get('/*', async(req, res)=>{
 		res.status(404).type('text/plain').send('');

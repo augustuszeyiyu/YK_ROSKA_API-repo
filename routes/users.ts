@@ -5,7 +5,32 @@ import { PGDelegate } from "pgdelegate";
 
 
 export = async function(fastify: FastifyInstance) {
-	/** /api/version **/
+	{
+		const schema = {
+			description: '透過電話或身分證字號取得使用者 uid',
+			summary: '透過電話或身分證字號取得使用者 uid',
+			params: {
+				description: '透過電話或身分證字號取得使用者 uid',
+				type: 'object',
+				properties: {
+					id: { type: 'string' },
+				}
+			},
+		};
+
+		fastify.get<{Params:{id:string}, Reply:Object}>('/user/:uid', {schema}, async (req, res)=>{			
+
+			const {id} = req.params;
+			const {rows:[row]} = await Postgres.query(`SELECT uid FROM users WHERE nid=$1 OR contact_home_number=$1 OR contact_mobile_number=$1;`, [id]);
+			if (row === undefined) {
+				return res.status(400).send({msg: '查無此人'});
+			}
+			else {
+				res.status(200).send(row.id);
+			}
+		});
+	}
+
 	{
 		const schema = {
 			description: '取得使用者資料',

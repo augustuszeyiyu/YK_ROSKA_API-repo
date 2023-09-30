@@ -26,3 +26,13 @@ BEGIN
    RETURN NEW;
 END;
 $$ LANGUAGE 'plpgsql';
+
+
+CREATE TABLE IF NOT EXISTS sysvar (
+   id                          BIGSERIAL           NOT NULL PRIMARY KEY,
+   key                         TEXT                NOT NULL,
+   value                       JSON                NOT NULL default 'null'::json
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "sysvar#key" ON "sysvar" ("key");
+
+INSERT INTO sysvar(key, value) VALUES('version', '0');
