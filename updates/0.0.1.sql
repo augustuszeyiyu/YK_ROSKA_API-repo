@@ -35,4 +35,5 @@ CREATE TABLE IF NOT EXISTS sysvar (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "sysvar#key" ON "sysvar" ("key");
 
-INSERT INTO sysvar(key, value) VALUES('version', '0');
+INSERT INTO sysvar(key, value) VALUES('version', '0')
+ON CONFLICT (key) DO NOTHING;

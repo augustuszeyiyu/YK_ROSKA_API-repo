@@ -18,7 +18,7 @@ export = async function(fastify: FastifyInstance) {
 			},
 		};
 
-		fastify.get<{Params:{id:string}, Reply:Object}>('/user/:uid', {schema}, async (req, res)=>{			
+		fastify.get<{Params:{id:string}, Reply:Object}>('/user/find/:id', {schema}, async (req, res)=>{			
 
 			const {id} = req.params;
 			const {rows:[row]} = await Postgres.query(`SELECT uid FROM users WHERE nid=$1 OR contact_home_number=$1 OR contact_mobile_number=$1;`, [id]);
