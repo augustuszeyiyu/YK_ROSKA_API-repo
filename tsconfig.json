@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"target": "es2020",
+		"module": "CommonJS",
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"strictNullChecks": true,
+//		"alwaysStrict": true,
+//		"strict": true,
+		"skipLibCheck": true,
+		"outDir": "./_dist",
+		"rootDir": ".",
+		"paths": {
+			"/*": [ "./*" ]
+		}
+	},
+	
+	"exclude": [ 
+		"./config.ts", "./config-*.ts",
+		"_dist", "_docs", "_html", "_legacy",
+		"mailer",
+		"node_modules", 
+		"package.json", 
+		"pakcage-lock.json",
+		"routes/8-layered-share"
+	]
+}

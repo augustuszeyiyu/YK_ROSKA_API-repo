@@ -1,0 +1,4 @@
+@host = http://localhost:33688
+
+# version
+GET {{host}}/api/version HTTP/1.1

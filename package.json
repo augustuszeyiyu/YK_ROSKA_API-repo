@@ -1,0 +1,53 @@
+{
+  "name": "yk_roska_api",
+  "version": "0.0.5",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx gulp --env=dev",
+    "update": "node ./_dist/update.js",
+    "start": "node ./_dist/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cookie": "^8.3.0",
+    "@fastify/formbody": "^7.4.0",
+    "@fastify/multipart": "^7.7.0",
+    "@fastify/static": "^6.11.2",
+    "@fastify/swagger": "^8.10.1",
+    "@fastify/swagger-ui": "^1.9.3",
+    "@types/node": "^20.3.2",
+    "@types/pg": "^8.10.2",
+    "beson": "^3.1.5",
+    "bignumber.js": "^9.0.1",
+    "clipargs": "^2.1.1",
+    "colors": "^1.4.0",
+    "copyfiles": "^2.4.1",
+    "ejstmpl": "^0.9.1",
+    "extes": "^4.2.1",
+    "fastify": "^4.18.0",
+    "jsonwebtoken": "^9.0.0",
+    "open": "^9.1.0",
+    "path": "^0.12.7",
+    "pg": "^8.11.1",
+    "pg-cursor": "^2.10.1",
+    "pgdelegate": "^0.6.9",
+    "phook": "^1.2.3",
+    "reroot": "^1.5.1",
+    "shared-storage": "github:JCloudYu/shared-storage#c45e6611deccd28b1cf77421a7e948b486dda8f0",
+    "trimid": "^4.1.0",
+    "updator": "^0.9.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^9.0.0",
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
+    "gulp": "^4.0.0",
+    "gulp-cli": "^2.3.0",
+    "gulp-run": "^1.7.1",
+    "gulp-typescript": "^6.0.0-alpha.1",
+    "mocha": "^9.1.1",
+    "typescript": "^4.8.4"
+  }
+}

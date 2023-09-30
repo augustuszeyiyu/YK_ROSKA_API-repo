@@ -1,0 +1,25 @@
+@host = http://localhost:33688
+
+# register
+POST {{host}}/api/register HTTP/1.1
+Content-Type: application/json
+
+{
+    "nid": "A112345678",
+    "name": "王曉明",
+    "gender": "string",
+    "birth_date": "1930-08-28",
+    "address": "台北市北投區光明路二段二樓",
+    "line_id": "Richard",
+    "contact_home_number": "02-28233708",
+    "contact_mobile_number": "093508888",
+    "bank_code": "004",
+    "branch_code": "02135",
+    "banck_account_name": "王曉明",
+    "banck_account_number": "2sfasdf23424144324",
+    "emergency_nid": "B123456789",
+    "emergency_contact": "王大明",
+    "emergency_contact_number": "0935088881",
+    "emergency_contact_relation": "父子",
+    "password": "1234"
+}
