@@ -13,9 +13,7 @@ export = async function(fastify: FastifyInstance) {
 		const schema = {
 			description: '產組團編號',
 			summary: '產組團編號',
-            body: {
-
-            },
+            body: {},
 		};
 
 		fastify.post('/group', {schema}, async (req, res)=>{
@@ -75,26 +73,15 @@ export = async function(fastify: FastifyInstance) {
 			description: '加入改團，新增會員入團',
 			summary: '加入改團，新增會員入團',
             params: {
-                type: { type: 'object' },
-                properties: {
-                    pid: { type: 'string' }
+                description: '加入改團，新增會員入團',
+                type: 'object',
+				properties: {
+                    gid: { type: 'string' }
                 },
             },
-			response: {
-				200: {
-					description: 'Successful response',
-					type: 'object',
-					properties: {
-						version: { type: 'string' }
-					},
-					example: {
-						version: '0.6.1'
-					}
-				}
-			},
 		};
 
-        fastify.post<{Params:{gid:RoscaGroups['gid']}, Reply:Object}>('/group/members/:gid', {schema}, async (req, res)=>{
+        fastify.post<{Params:{gid:RoscaGroups['gid']}}>('/group/member/:gid', {schema}, async (req, res)=>{
             const {uid}:{uid:User['uid']} = req.session.token!;
 
             const {gid} = req.params;
@@ -105,6 +92,35 @@ export = async function(fastify: FastifyInstance) {
             
 			res.status(200).send({gid});
 		});
+    }
+
+    {
+        const schema = {
+			description: '搜尋該團下的成員',
+			summary: '搜尋該團下的成員',
+            params: {
+                description: '搜尋該團下的成員',
+                type: 'object',
+				properties: {
+                    gid: { type: 'string' }
+                },
+            },
+		};
+
+        fastify.get<{Params:{gid:RoscaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
+
+            const {gid} = req.params;
+
+            const {rows} = await Postgres.query(
+                `SELECT m.mid, m.gid, u.uid, u.contact_mobile_number, u.address
+                FROM roska_groups g
+                INNER JOIN roska_members m ON g.gid=m=gid
+                LEFT JOIN users u ON m.uid=u.uid
+                WHERE g.gid=$1
+                ORDER BY m.mid ASC;`,[gid]);
+
+            return res.status(200).send(rows);
+        });
     }
 
 };
