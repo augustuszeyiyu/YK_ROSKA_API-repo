@@ -87,7 +87,11 @@ Promise.chain(async()=>{
 	  },
 	  staticCSP: true,
 	  transformStaticCSP: (header) => header,
-	  transformSpecification: (swaggerObject, request, reply) => { return swaggerObject },
+	//   transformSpecification: (swaggerObject, request, reply) => { return swaggerObject },
+	  transformSpecification: (swaggerObject, req, reply) => {
+		swaggerObject.host = req.hostname
+		return swaggerObject
+	  },
 	  transformSpecificationClone: true
 	})
 
