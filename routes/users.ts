@@ -2,51 +2,27 @@ import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
 import {User} from '/data-type/users.js';
 import { PGDelegate } from "pgdelegate";
+import { LoginError, UserError } from "/lib/error";
 
 
 export = async function(fastify: FastifyInstance) {
 	{
 		const schema = {
-			description: '透過電話或身分證字號取得使用者 uid',
-			summary: '透過電話或身分證字號取得使用者 uid',
+			description: '取得使用者自己的資料',
+			summary: '取得使用者自己的資料',
 			params: {
-				description: '透過電話或身分證字號取得使用者 uid',
-				type: 'object',
-				properties: {
-					id: { type: 'string' },
-				}
+				properties: {}
 			},
 		};
 
-		fastify.get<{Params:{id:string}, Reply:Object}>('/user/find/:id', {schema}, async (req, res)=>{			
-
-			const {id} = req.params;
-			const {rows:[row]} = await Postgres.query(`SELECT uid FROM users WHERE nid=$1 OR contact_home_number=$1 OR contact_mobile_number=$1;`, [id]);
-			if (row === undefined) {
-				return res.status(400).send({msg: '查無此人'});
+		fastify.get<{Reply:Object}>('/user', {schema}, async (req, res)=>{			
+			if (req.session.is_login === false) {
+				return res.errorHandler(LoginError.LOGIN_REQUIRED);
 			}
-			else {
-				res.status(200).send(row.id);
-			}
-		});
-	}
 
-	{
-		const schema = {
-			description: '取得使用者資料',
-			summary: '取得使用者資料',
-			params: {
-				description: '取得使用者資料',
-				type: 'object',
-				properties: {
-					uid: { type: 'string' },
-				}
-			},
-		};
+			const {uid} = req.session.token!;
+			
 
-		fastify.get<{Params:{uid:User['uid']}, Reply:Object}>('/user/:uid', {schema}, async (req, res)=>{			
-
-			const {uid} = req.params;
 			const {rows:[row]} = await Postgres.query(`SELECT * FROM users WHERE uid=$1;`, [uid]);
 			delete row.password;
 
@@ -56,20 +32,12 @@ export = async function(fastify: FastifyInstance) {
 
 	{
 		const schema = {
-			description: '修改使用者資料',
-			summary: '修改使用者資料',
-			params: {
-				description: '修改使用者資料',
-				type: 'object',
-				properties: {
-					uid: { type: 'string' },
-				}
-			},
+			description: '修改使用者自己的資料',
+			summary: '修改使用者自己的資料',
 			body: {
-				description: '修改使用者資料',
+				description: '修改使用者自己的資料',
 				type: 'object',
 				properties: {
-					role: { type: 'string' },
 					address: { type: 'string' },
 					line_id: { type: 'string' },
 					contact_home_number: { type: 'string' },
@@ -86,16 +54,19 @@ export = async function(fastify: FastifyInstance) {
 			},
 		};
 
-		fastify.post<{Params:{uid:User['uid']}, Body:Partial<User>, Reply:Object}>('/user/:uid', {schema}, async (req, res)=>{
-			const {uid} = req.session.token!
+		fastify.post<{Body:Partial<User>, Reply:Object}>('/user', {schema}, async (req, res)=>{
+			if (req.session.is_login === false) {
+				return res.errorHandler(LoginError.LOGIN_REQUIRED);
+			}
 
+			const {uid} = req.session.token!;
 
 			const {rows:[row]} = await Postgres.query(`SELECT * FROM users WHERE uid=$1 AND revoked=false;`, [uid]);
 			if (row === undefined) {
-				return res.status(400).send('使用者不存在');
+				return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS);
 			}
 
-			const { role, address, line_id, contact_home_number, contact_mobile_number, bank_code, branch_code, bank_account_name, bank_account_number, 
+			const { address, line_id, contact_home_number, contact_mobile_number, bank_code, branch_code, bank_account_name, bank_account_number, 
 					emergency_nid, emergency_contact, emergency_contact_number, emergency_contact_relation} = req.body;
 			
 
@@ -105,7 +76,6 @@ export = async function(fastify: FastifyInstance) {
 				const Main_Island_Home_Number_Pattern = /^0[2-9]-\d{7,8}$/;
 				const Number_String_Pattern = /^[0-9]*\.?[0-9]+$/;
 
-				if (role !== undefined)									{ payload.role = role };
 
 				if (address !== undefined)								{ payload.address = address; }
 	

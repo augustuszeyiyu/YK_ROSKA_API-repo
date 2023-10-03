@@ -241,6 +241,7 @@ export = async function(fastify:FastifyInstance) {
                 contact_home_number:        {type:"string"},
                 contact_mobile_number:      {type:"string"},
                 address:                    {type:"string"},
+                role:                       {type:"string"},
             },
 			required:["uid"]
         }
@@ -258,7 +259,8 @@ export = async function(fastify:FastifyInstance) {
 			password:string,
             contact_home_number:string,
             contact_mobile_number:string,
-            address:string
+            address:string,
+            role:string,
         };
 		fastify.post<{Params:{uid:User['uid']}, Body:PayloadBody, Reply:object}>('/user/:uid', {schema}, async(req, res)=>{
             if ( !PayloadValidator1(req.params) ) {
@@ -324,6 +326,10 @@ export = async function(fastify:FastifyInstance) {
 				if (payload.address !== undefined) {
 					update_list.address = payload.address;
 				}
+
+                if (payload.role !== undefined) {
+                    update_list.role = payload.role;
+                };
             }
 
 			// UPDATE users

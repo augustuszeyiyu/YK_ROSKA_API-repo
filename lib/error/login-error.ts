@@ -1,4 +1,8 @@
 export class LoginError {
+	public static LOGIN_REQUIRED:HuntErrorItem = {
+		status:400, code:'api#login#login-required',
+		msg:'Login Required!'
+	};
 	public static INVALID_ACCOUNT_OR_PASSWORD:HuntErrorItem = {
 		status:400, code:'api#login#incorrect-account-or-password',
 		msg:'Given account or password is invalid!'
