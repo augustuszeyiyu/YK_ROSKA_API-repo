@@ -27,7 +27,23 @@ export default async function() {
 
 		await PostgreFactory.init(Config.postgres);
 	}
+	console.log("Check Table sysvar exist or not");
+	{
+		const {rows:[row]} = await PostgreFactory.query(`SELECT to_regclass('public.sysvar');`);
+		if (row.to_regclass === null) {
+			console.log("Table sysvar doesn not exist. Create now...");
 
+			const {rows:[row]} = await PostgreFactory.query(`
+			CREATE TABLE IF NOT EXISTS sysvar (
+				id                          BIGSERIAL           NOT NULL PRIMARY KEY,
+				key                         TEXT                NOT NULL,
+				value                       JSON                NOT NULL default 'null'::json
+			);`);
+
+			await PostgreFactory.query(`CREATE UNIQUE INDEX IF NOT EXISTS "sysvar#key" ON "sysvar" ("key");`);
+			await PostgreFactory.query(`INSERT INTO sysvar(key, value) VALUES('version', '0') ON CONFLICT (key) DO NOTHING;`);
+		}
+	}
 	console.log("Init sysvar system...");
 	{
 		// Move out

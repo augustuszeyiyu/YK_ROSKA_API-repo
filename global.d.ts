@@ -27,6 +27,16 @@ declare global {
 	}
 
 
+	interface PaginateCursor<RecordType> {
+		records:RecordType[];
+		meta: {
+			page:uint;
+			page_size:uint;
+			total_records:uint;
+			total_pages:uint;
+		}
+	}
+	
 	// #region DEPRECATED
 	type HuntSuccResponse = {
 		code:string;

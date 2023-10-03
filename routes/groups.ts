@@ -3,12 +3,23 @@ import { FastifyInstance, FastifyReply, FastifyRequest } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
 import { RoscaGroups, RoscaMembers } from '/data-type/groups';
 import { User } from '/data-type/users';
-import { MAX_NUMBER } from 'updator/_dist/version';
 import { PGDelegate } from 'pgdelegate';
 
 
 export = async function(fastify: FastifyInstance) {
-	/** 建立組團編號 **/
+	/** 搜尋組團 **/
+    {
+        const schema = {
+			description: '搜尋組團',
+			summary: '搜尋組團',
+            body: {},
+		};
+
+        fastify.get('/group', {schema}, async (req, res)=>{
+            const {rows:[row]} = await Postgres.query(`SELECT * FROM roska_goups ORDER BY`)
+        });
+    }
+    /** 建立組團編號 **/
 	{
 		const schema = {
 			description: '產組團編號',
@@ -24,10 +35,11 @@ export = async function(fastify: FastifyInstance) {
             let gid = generateNextId(row.gid);
             if (gid === undefined)  gid = generateNextId('YA0000');
             
-            await Postgres.query(`INSERT INTO roska_groups(gid, max_member) VALUES ($1, $2) RETURNING *;`, [gid, MAX_NUMBER]);
+            const {rows:[sysvar]} = await Postgres.query(`SELECT value FROM sysvar WHERE key=$1;`, ['max_members']);
+            await Postgres.query(`INSERT INTO roska_groups(gid, max_member) VALUES ($1, $2) RETURNING *;`, [gid, Number(sysvar.value)]);
 
             const sql_list:string[] = [];
-            for (let index = 1; index <= MAX_NUMBER; index++) {
+            for (let index = 0; index < Number(sysvar.value); index++) {
                 const number_string = index.toString().padStart(2, '0');
                 sql_list.push(PGDelegate.format(`INSERT INTO roska_members(mid, gid) VALUES ({mid}, {gid});`, {mid:`${gid}-${number_string}`, gid}));
             }
