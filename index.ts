@@ -37,6 +37,8 @@ Promise.chain(async()=>{
 	{
 		// Connnect to postgresql
 		await (await import('./index.db.js')).default();
+		// Init $ 
+		await (await import('./index.env.js')).default();
 	}
 
 
@@ -182,7 +184,8 @@ Promise.chain(async()=>{
 		.register((await import('/routes/register.js')).default,					{prefix:'/'})
 		.register((await import('/routes/users.js')).default,						{prefix:'/'})
 		.register((await import('/routes/groups.js')).default,						{prefix:'/'})
-		.register((await import('/routes/auth/auth-login-session.js')).default,		{prefix:'/auth'})
+		.register((await import('/routes/auth/auth.js')).default,					{prefix:'/auth'})
+		.register((await import('/routes/admin/admin.js')).default,					{prefix:'/admin'})
 
 		.register((await import('/routes/version.js')).default,						{prefix:'/'})
 	}, {prefix:'/api'})

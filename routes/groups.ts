@@ -1,5 +1,5 @@
 import payload = require('/package.json');
-import { FastifyInstance, FastifyReply, FastifyRequest } 	from "fastify";
+import { FastifyInstance, FastifyReply, FastifyRequest, FastifySchema } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
 import { RoscaGroups, RoscaMembers } from '/data-type/groups';
 import { User } from '/data-type/users';
@@ -12,7 +12,9 @@ export = async function(fastify: FastifyInstance) {
         const schema = {
 			description: '搜尋組團',
 			summary: '搜尋組團',
-            body: {},
+            params: {
+                type: 'object',
+            },
 		};
 
         fastify.get('/group', {schema}, async (req, res)=>{

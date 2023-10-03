@@ -7,7 +7,6 @@ import reroot from 'reroot';
 import $ from "shared-storage";
 
 import Config from '/config.default.js';
-import {Decrypt} from '/lib/crypt_decrypt.js';
 import ProjectInfo from "/package.json";
 
 
@@ -15,12 +14,9 @@ export default async function() {
 	EJSTmpl.search_root = `${reroot.project_root}/tmpl`;
 
 
-
-	// Init ajv and other helper functions
+	console.log('Init ajv and other helper functions');	
 	$.ajv = new Ajv();
-	$.tmpl = (tmpl_path, tmpl_data)=>EJSTmpl.init(tmpl_path).render(tmpl_data);
-
-
+	
 
 
 	console.log('Initialize image files directory...');

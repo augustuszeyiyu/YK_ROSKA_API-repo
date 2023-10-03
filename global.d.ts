@@ -10,20 +10,10 @@ import MQTTCore from "./lib/mqttcore.js";
 
 declare global {
 	interface ExtendedSharedStorage {
-		redis: RedisClient;
-		redipc: redipc;
-		binanceipc: redipc;
 		ajv: ajv;
-		tmpl: {<TmplParamType extends object = any>(tmpl_path:string, tmpl_var:TmplParamType):string};
-		http_send_mail_noti: typeof Http_Send_Mail_Noti;
 		promise:{<DataType = any>(handler:{(callback:{(err:Error, data:any):void}):void}):Promise<DataType>};
 		sysvar:SysVarControl;
-		mqttipc:typeof MQTTCore;
-
-		SECRET: string;
-		STORAGE_ROOT: string;
-		LIMIT_UPDATE_TIMEOUT: NodeJS.Timeout|null|false;
-		SCHEDULE: any[];		
+		STORAGE_ROOT: string;	
 	}
 
 
@@ -36,7 +26,7 @@ declare global {
 			total_pages:uint;
 		}
 	}
-	
+
 	// #region DEPRECATED
 	type HuntSuccResponse = {
 		code:string;

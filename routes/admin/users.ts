@@ -15,17 +15,23 @@ export = async function(fastify:FastifyInstance) {
 	
 	// GET /admin/user/list
 	{
-		const PayloadValidator = $.ajv.compile({
+        const schema_query = {
             type: "object",
             properties: {
-                filter_text: {type:"string"},               
+                filter_text: {type:"string"},
 				order: {type:"string"},
 				p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
 				ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
-        });
+        }
+        const schema = {
+            description: '管理者搜尋使用者列表',
+			summary: '管理者搜尋使用者列表',
+            querystring: schema_query
+        }
+		const PayloadValidator = $.ajv.compile(schema_query);
 		type PaginateCursorUser = PaginateCursor<{ "uid":string, "name":string, "contact_home_number":string, "contact_mobile_number":string, "create_time":number }[]>;
-		fastify.get<{Querystring:{filter_text?:string, order?:string, p?:string, ps?:string}, Reply:APIResponse<PaginateCursorUser>}>('/user/list', async (req, res) => {
+		fastify.get<{Querystring:{filter_text?:string, order?:string, p?:string, ps?:string}, Reply:APIResponse<PaginateCursorUser>}>('/user/list', {schema}, async (req, res) => {
 			if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
@@ -167,15 +173,21 @@ export = async function(fastify:FastifyInstance) {
 	}
     // GET api/admin/user/:uid
 	{
-		const PayloadValidator = $.ajv.compile({
+        const schema_params = {
             type: "object",
             properties: {
-                uid: {type:"string"},               
+                uid: {type:"string"},
             },
 			required:["user_id"]
-        });
+        };
+        const schema = {
+            description: '管理者搜尋使用者個人資料',
+			summary: '管理者搜尋使用者個人資料',
+            params: schema_params
+        }
+		const PayloadValidator = $.ajv.compile(schema_params);
 		type ResponseUser= User & {};
-		fastify.get<{Params:{uid:string}, Reply:APIResponse<ResponseUser>}>('/user/:uid', async(req, res)=>{
+		fastify.get<{Params:{uid:string}, Reply:APIResponse<ResponseUser>}>('/user/:uid', {schema}, async(req, res)=>{
 			if ( !PayloadValidator(req.params) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
