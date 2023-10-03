@@ -180,22 +180,50 @@ CREATE TABLE IF NOT EXISTS banks (
 
 
 -- roska_groups
+DROP TABLE IF EXISTS roska_groups CASCADE;
 CREATE TABLE IF NOT EXISTS roska_groups (
 	gid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
+    uid                         VARCHAR(32)         NOT NULL,
     max_member             	    INTEGER             NOT NULL DEFAULT 0,
+    revoked                     BOOLEAN             NOT NULL DEFAULT false,
 	update_time					INTEGER             NOT NULL DEFAULT 0,
     create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now())
 );
 
 
 -- roska_members
+DROP TABLE IF EXISTS roska_members CASCADE;
 CREATE TABLE IF NOT EXISTS roska_members (
     mid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
     gid 					    VARCHAR(15)		    NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
+    installment_length          SMALLINT            NOT NULL DEFAULT 0,
     joing_time                  INTEGER             NOT NULL DEFAULT 0,
 	update_time					INTEGER             NOT NULL DEFAULT 0,
     create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
     FOREIGN KEY (gid) REFERENCES roska_groups(gid),
+    FOREIGN KEY (uid) REFERENCES users(uid)
+);
+
+CREATE INDEX IF NOT EXISTS "roska_members#gid" on roska_members(gid);
+
+
+-- roska_details
+DROP TABLE IF EXISTS roska_details CASCADE;
+CREATE TABLE IF NOT EXISTS roska_details (
+    mid 					    VARCHAR(15)		    NOT NULL,
+    gid 					    VARCHAR(15)		    NOT NULL,
+    uid                         VARCHAR(32)         NOT NULL DEFAULT '',
+    count                       SMALLINT            NOT NULL DEFAULT 0,
+    bid                         DECIMAL             NOT NULL DEFAULT 0,
+    win                         BOOLEAN             NOT NULL DEFAULT false,
+    win_time                    INTEGER             NOT NULL DEFAULT 0,
+    installment_deadline        INTEGER             NOT NULL DEFAULT 0,
+    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
+	update_time					INTEGER             NOT NULL DEFAULT 0,
+    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
+    PRIMARY KEY (mid, gid, uid, count),
+    FOREIGN KEY (gid) REFERENCES roska_groups(gid),
+    FOREIGN KEY (mid) REFERENCES roska_members(mid),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );

@@ -14,6 +14,7 @@ export = async function(fastify: FastifyInstance) {
 			summary: '搜尋組團',
             params: {
                 type: 'object',
+                properties:[]
             },
 		};
 
@@ -21,66 +22,7 @@ export = async function(fastify: FastifyInstance) {
             const {rows:[row]} = await Postgres.query(`SELECT * FROM roska_goups ORDER BY`)
         });
     }
-    /** 建立組團編號 **/
-	{
-		const schema = {
-			description: '產組團編號',
-			summary: '產組團編號',
-            body: {},
-		};
 
-		fastify.post('/group', {schema}, async (req, res)=>{
-            const {uid}:{uid:User['uid']} = req.session.token!;
-
-            const {rows:[row]} = await Postgres.query<RoscaGroups>(`SELECT gid FROM roska_groups ORDER BY gid DESC;`);
-            
-            let gid = generateNextId(row.gid);
-            if (gid === undefined)  gid = generateNextId('YA0000');
-            
-            const {rows:[sysvar]} = await Postgres.query(`SELECT value FROM sysvar WHERE key=$1;`, ['max_members']);
-            await Postgres.query(`INSERT INTO roska_groups(gid, max_member) VALUES ($1, $2) RETURNING *;`, [gid, Number(sysvar.value)]);
-
-            const sql_list:string[] = [];
-            for (let index = 0; index < Number(sysvar.value); index++) {
-                const number_string = index.toString().padStart(2, '0');
-                sql_list.push(PGDelegate.format(`INSERT INTO roska_members(mid, gid) VALUES ({mid}, {gid});`, {mid:`${gid}-${number_string}`, gid}));
-            }
-            
-            await Postgres.query(sql_list.join(', '));
-            
-			res.status(200).send({gid});
-		});
-
-
-        function generateNextId(last_group_id:string) {
-            let  currentPrefix = last_group_id.substring(1,2);
-            let  currentNumber = Number(last_group_id.substring(2, last_group_id.length));
-
-            // Get the current date in YYMMDD format
-            const today = new Date();
-            const year = today.getFullYear() % 100;
-            const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Ensure 2 digits for month
-            const day = today.getDate().toString().padStart(2, '0'); // Ensure 2 digits for day
-            const yymmdd = `${year}${month}${day}`;
-            console.log(yymmdd);
-            
-            
-            
-            // Increment the number and handle prefix changes
-            currentNumber++;
-            if (currentNumber > 9999) {
-                currentNumber = 1; // Reset the number to '1'
-                currentPrefix = String.fromCharCode(currentPrefix.charCodeAt(0) + 1); // Increment the prefix character
-            }
-            
-
-            // Create the ID by combining the prefix, number, and date
-            const id = `Y${currentPrefix}${currentNumber.toString().padStart(4, '0')}-${yymmdd}`;
-
-
-            return id;
-        }
-	}
 
     {
         const schema = {
@@ -122,7 +64,7 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         fastify.get<{Params:{gid:RoscaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
-
+            const {uid}:{uid:User['uid']} = req.session.token!;
             const {gid} = req.params;
 
             const {rows} = await Postgres.query(

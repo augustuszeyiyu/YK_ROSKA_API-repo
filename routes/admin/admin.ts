@@ -19,4 +19,5 @@ export = async function(fastify:FastifyInstance) {
 
 
 	fastify.register((await import('./users.js')).default);
+    fastify.register((await import('./groups.js')).default);
 }
