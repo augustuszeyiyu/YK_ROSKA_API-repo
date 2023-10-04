@@ -4,7 +4,7 @@ import {RedisClient, createClient} from "redis";
 import mongodb from "mongodb";
 import { VarStore } from "varstore";
 import { Http_Send_Mail_Noti } from "/data-type/mail.js"
-import { User } from "./data-type/user";
+import { User } from "/data-type/user";
 import {SysVarControl} from "/lib/sysvar.js";
 import MQTTCore from "./lib/mqttcore.js";
 
@@ -56,11 +56,11 @@ declare global {
 	type LoginSession = {
 		source: 'unkown'|'cookie'|'auth';
 		is_login: boolean;
-		token?: RoscaSessToken;
+		token?: RoskaSessToken;
 		raw_token?: string;
 		admin_level?: number;
 	};
-	type RoscaSessToken = {
+	type RoskaSessToken = {
 		tid: string, 	// token's corresponding unique id
 		uid: string, 	// related user's unique id
 		role: string,
@@ -68,7 +68,7 @@ declare global {
 		iat: number, 	// epoch timestamp
 		exp: number 	// expired time - epoch timestamp
 	};
-	type HuntRefreshToken = Pick<RoscaSessToken, 'tid'|'exp'>
+	type HuntRefreshToken = Pick<RoskaSessToken, 'tid'|'exp'>
 }
 
 declare module 'fastify' {

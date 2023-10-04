@@ -1,7 +1,7 @@
 import payload = require('/package.json');
 import { FastifyInstance, FastifyReply, FastifyRequest, FastifySchema } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoscaGroups, RoscaMembers } from '/data-type/groups';
+import { RoskaGroups, RoskaMembers } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 
@@ -37,13 +37,13 @@ export = async function(fastify: FastifyInstance) {
             },
 		};
 
-        fastify.post<{Params:{gid:RoscaGroups['gid']}}>('/group/member/:gid', {schema}, async (req, res)=>{
+        fastify.post<{Params:{gid:RoskaGroups['gid']}}>('/group/member/:gid', {schema}, async (req, res)=>{
             const {uid}:{uid:User['uid']} = req.session.token!;
 
             const {gid} = req.params;
             
             const {rows:[row]} = await Postgres.query(`SELECT mid FROM roska_members WHERE gid=$1 AND join_time=0 ORDER BY mid ASC LIMIT 1;`, [gid]);
-            await Postgres.query<RoscaMembers>(`UPDATE roska_members SET uid=$1, joing_time=$2 WHERE mid=$3 AND gid=$4 RETURNING *;`, [uid, Date.unix(), gid, row.mid]);
+            await Postgres.query<RoskaMembers>(`UPDATE roska_members SET uid=$1, joing_time=$2 WHERE mid=$3 AND gid=$4 RETURNING *;`, [uid, Date.unix(), gid, row.mid]);
 
             
 			res.status(200).send({gid});
@@ -63,7 +63,7 @@ export = async function(fastify: FastifyInstance) {
             },
 		};
 
-        fastify.get<{Params:{gid:RoscaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
             const {uid}:{uid:User['uid']} = req.session.token!;
             const {gid} = req.params;
 

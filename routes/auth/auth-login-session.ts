@@ -119,7 +119,7 @@ export = async function(fastify:FastifyInstance) {
 
 
 			// NOTE: Generate JWT Token
-			const TOKEN_INFO:RoscaSessToken = {
+			const TOKEN_INFO:RoskaSessToken = {
 				tid: TrimId.NEW.toString(32),
 				uid: user_id!,
 				role: user_role,

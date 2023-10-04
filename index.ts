@@ -149,7 +149,7 @@ Promise.chain(async()=>{
 
 
 			
-			const parsed_token = BWT.ParseBWT<RoscaSessToken>(raw_token, Config.secret.session);
+			const parsed_token = BWT.ParseBWT<RoskaSessToken>(raw_token, Config.secret.session);
 			if ( !parsed_token ) return;
 
 			let is_valid_token = parsed_token.exp >= Date.unix();

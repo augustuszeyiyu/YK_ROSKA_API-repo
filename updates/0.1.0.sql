@@ -178,16 +178,31 @@ CREATE TABLE IF NOT EXISTS banks (
 	PRIMARY KEY (bank_code, branch_code)
 );
 
+-- roska_serials
+DROP TABLE IF EXISTS roska_serials CASCADE;
+CREATE TABLE IF NOT EXISTS roska_serials (
+    sid                         VARCHAR(15)		    NOT NULL PRIMARY KEY,
+    uid                         VARCHAR(32)         NOT NULL,
+    basic_unit_amount           DECIMAL             NOT NULL DEFAULT 0,
+    min_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
+    max_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
+    bid_unit_spacing            INTEGER             NOT NULL DEFAULT 0,
+    g_frequency                 SMALLINT            NOT NULL DEFAULT 30,
+	update_time					INTEGER             NOT NULL DEFAULT 0,
+    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now())
+);
+
 
 -- roska_groups
 DROP TABLE IF EXISTS roska_groups CASCADE;
 CREATE TABLE IF NOT EXISTS roska_groups (
 	gid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
-    uid                         VARCHAR(32)         NOT NULL,
-    max_member             	    INTEGER             NOT NULL DEFAULT 0,
-    revoked                     BOOLEAN             NOT NULL DEFAULT false,
+    sid                         VARCHAR(15)		    NOT NULL,
+    bit_start_time              INTEGER             NOT NULL DEFAULT 0,
+    bit_end_time                INTEGER             NOT NULL DEFAULT 0,
 	update_time					INTEGER             NOT NULL DEFAULT 0,
-    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now())
+    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
+    FOREIGN KEY (sid) REFERENCES roska_serials(sid)
 );
 
 
@@ -196,34 +211,18 @@ DROP TABLE IF EXISTS roska_members CASCADE;
 CREATE TABLE IF NOT EXISTS roska_members (
     mid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
     gid 					    VARCHAR(15)		    NOT NULL,
+    sid                         VARCHAR()
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
-    total_sessions              SMALLINT            NOT NULL DEFAULT 0,
-    joing_time                  INTEGER             NOT NULL DEFAULT 0,
-	update_time					INTEGER             NOT NULL DEFAULT 0,
-    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
-    FOREIGN KEY (gid) REFERENCES roska_groups(gid),
-    FOREIGN KEY (uid) REFERENCES users(uid)
-);
-
-CREATE INDEX IF NOT EXISTS "roska_members#gid" on roska_members(gid);
-
-
--- roska_details
-DROP TABLE IF EXISTS roska_details CASCADE;
-CREATE TABLE IF NOT EXISTS roska_details (
-    mid 					    VARCHAR(15)		    NOT NULL,
-    gid 					    VARCHAR(15)		    NOT NULL,
-    uid                         VARCHAR(32)         NOT NULL DEFAULT '',
-    session                     SMALLINT            NOT NULL DEFAULT 0,
-    bid                         DECIMAL             NOT NULL DEFAULT 0,
+    bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win                         BOOLEAN             NOT NULL DEFAULT false,
     win_time                    INTEGER             NOT NULL DEFAULT 0,
-    installment_deadline        INTEGER             NOT NULL DEFAULT 0,
     installment_amount          DECIMAL             NOT NULL DEFAULT 0,
+    installment_deadline        INTEGER             NOT NULL DEFAULT 0,
+    joing_time                  INTEGER             NOT NULL DEFAULT 0,
+    assignment_path             LTREE               NOT NULL DEFAULT '',
 	update_time					INTEGER             NOT NULL DEFAULT 0,
     create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
-    PRIMARY KEY (mid, gid, uid, session),
     FOREIGN KEY (gid) REFERENCES roska_groups(gid),
-    FOREIGN KEY (mid) REFERENCES roska_members(mid),
+    FOREIGN KEY (sid) REFERENCES roska_groups(sid),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );

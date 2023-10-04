@@ -38,6 +38,6 @@ CREATE TABLE IF NOT EXISTS sysvar (
 CREATE UNIQUE INDEX IF NOT EXISTS "sysvar#key" ON "sysvar" ("key");
 
 INSERT INTO sysvar(key, value) VALUES('version', '0') ON CONFLICT (key) DO NOTHING;
-INSERT INTO sysvar(key, value) VALUES('max_members', '25') ON CONFLICT (key) DO NOTHING;
+INSERT INTO sysvar(key, value) VALUES('members_range', '[7, 25]') ON CONFLICT (key) DO NOTHING;
 INSERT INTO sysvar(key, value) VALUES('handling_fee', '250') ON CONFLICT (key) DO NOTHING;
 INSERT INTO sysvar(key, value) VALUES('holiday', '{"solar_calendar_holiday":[0101,228,261,321,1010],"lunar_calendar_holiday":[1231,65,66,67,68,69,325,815]}') ON CONFLICT (key) DO NOTHING;
