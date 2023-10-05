@@ -67,7 +67,7 @@ export function isValidTaiwanNationalID(nid:string) {
     // Compare with the provided checksum digit
     return checksum === Number(nid[10]);
 }
-export function isValidImmigrateTaiwanNationalID(nid:string) {
+export function isValidNewResidentID(nid:string) {
     // Check if the ID has the correct format
     nid = nid.toUpperCase();
     const regex = /^[A-Z][8-9]\d{8}$/;

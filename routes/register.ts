@@ -3,7 +3,7 @@ import {PGDelegate} from "pgdelegate";
 import TrimId from "trimid";
 
 import Postgres from '/data-source/postgres.js';
-import {User, User_Registr} from '/data-type/users.js';
+import {User, User_Registr, isValidNewResidentID, isValidPassword, isValidTaiwanNationalID} from '/data-type/users.js';
 
 
 export = async function(fastify: FastifyInstance) {
@@ -89,11 +89,21 @@ export = async function(fastify: FastifyInstance) {
 				else						{ 
 					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE nid=$1;', [nid]);
 					if (row) 				{ return res.status(400).send({msg:'該身分證字號已被註冊'}); }
+					else 
+					if (isValidTaiwanNationalID(nid)=== false || isValidNewResidentID(nid) === false) {
+											return res.status(400).send({msg:'該身分證字號錯誤'});	
+					}
 					else 					{ payload.nid = nid;  }					
 				}
 				
 				if (name === undefined)		{ return res.status(400).send({msg:'姓名必填'}); }
 				else						{ payload.name = name; }
+
+				if (password === undefined)	{ return res.status(400).send({msg:'密碼必填'}); }
+				else
+				if (isValidPassword(password) === false) 
+											{ return res.status(400).send({msg:'密碼錯誤'}); }
+				else						{ payload.password = password; }
 
 				if (gender === undefined)	{ return res.status(400).send({msg:'性別必填'}); }
 				else						{ payload.gender = gender; }
@@ -145,8 +155,6 @@ export = async function(fastify: FastifyInstance) {
 				if (emergency_contact_relation === undefined) 			{ return res.status(400).send({msg:'緊急連絡關係必填'}); }
 				else													{ payload.emergency_contact_relation = emergency_contact_relation; }
 
-				if (password === undefined)								{ return res.status(400).send({msg:'密碼必填'}); }
-				else													{ payload.password = password; }
 
 				if (referrer_nid !== undefined) 						{ 
 					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE nid=$1;', [referrer_nid]);

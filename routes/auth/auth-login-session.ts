@@ -12,7 +12,7 @@ import {LOGIN_SESSION_DURATION} from '/lib/constants.js';
 import Postgres from '/data-source/postgres.js';
 import BWT from "/lib/web-token.js";
 import TrimId from 'trimid';
-import { User } from '/data-type/users.js';
+import { User, isValidNewResidentID, isValidPassword, isValidTaiwanNationalID } from '/data-type/users.js';
 
 
 
@@ -115,10 +115,20 @@ export = async function(fastify:FastifyInstance) {
 			{
 				if ( nid === undefined ) {
 					return res.errorHandler(LoginError.NID_REQUIRED)
-				} 
+				}
+				else 
+				if (isValidTaiwanNationalID(nid) === false && isValidNewResidentID(nid)) {
+					return res.errorHandler(UserError.INVALID_ACCOUNT_FORMAT);
+				}
+
 				if ( password === undefined ) {
 					return res.errorHandler(LoginError.PASSWORD_REQUIRED);
 				}
+				else
+				if ( isValidPassword(password) ) {
+					return res.errorHandler(UserError.INVALID_PASSWORD_FORMAT);
+				}
+
 				if ( captcha === undefined ) {
 					return res.errorHandler(LoginError.CAPTCHA_REQUIRED);
 				}
@@ -131,17 +141,25 @@ export = async function(fastify:FastifyInstance) {
 					return res.errorHandler(LoginError.CAPTCHA_INVALID);
 				}
 			}
+			// NOTE: check nid and password
 			let user_id:string, user_role:string;
 			{
-				// NOTE: check password
 				try {
+					const {rows:[USER]} = await Postgres.query<{uid:User['uid'], role:User['role']}>(`SELECT uid, role FROM users WHERE nid=$1;`, [nid]);
+					if (USER === undefined) {
+						return res.errorHandler( LoginError.INVALID_ACCOUNT_OR_PASSWORD );
+					}
 					// NOTE: verify user password
-					const {rows:[row]} = await Postgres.query<{uid:User['uid'], role:User['role']}>(`SELECT (verify_password($1, $2)).*;`, [nid, password]);				
-					if (row === undefined) {
+					const {rows:[IS_VALID]} = await Postgres.query<{uid:User['uid'], role:User['role']}>(`SELECT (verify_password($1, $2)).*;`, [nid, password]);				
+					if (IS_VALID === undefined) {
 						return res.errorHandler( UserError.INVALID_PASSWORD );
 					}
-					user_id   = row.uid;
-					user_role = row.role;
+					if (USER.uid !== IS_VALID.uid && USER.role !== IS_VALID.role)  {
+						return res.errorHandler( LoginError.INVALID_ACCOUNT_OR_PASSWORD );
+					}
+
+					user_id   = USER.uid;
+					user_role = USER.role;
 				} catch (error) {
 					return res.errorHandler( UserError.INVALID_PASSWORD );
 				}
