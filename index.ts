@@ -101,7 +101,7 @@ Promise.chain(async()=>{
 	})
 	.register((await import('@fastify/cookie')).default)
 
-	// application/x-www-form-urlencoded
+	// application/x-www-form-urlencoded or text/html
 	.register((await import('@fastify/formbody')).default)
 
 	// multipart/form-data

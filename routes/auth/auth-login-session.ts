@@ -6,6 +6,7 @@ import $ from "shared-storage";
 import Config from '/config.default.js';
 import {FastifyInstance} from "fastify";
 import {PGDelegate} from "pgdelegate";
+import {create as svgCaptcha_create} from 'svg-captcha';
 import {BaseError, LoginError, UserError} from '/lib/error.js';
 import {LOGIN_SESSION_DURATION} from '/lib/constants.js';
 import Postgres from '/data-source/postgres.js';
@@ -58,7 +59,25 @@ export = async function(fastify:FastifyInstance) {
 			res.status(200).send(result);
 		});
 	}
+	/** GET /auth/login */
+	{
+		fastify.get('/login', async (req, res) => {
+			// Generate a new CAPTCHA
+			const captcha = svgCaptcha_create({ size: 6, noise: 2, color: true, background: '#f0f0f0' });
+			
+			// Store the CAPTCHA text in a session or database for verification
+			const cid = TrimId.NEW.toString(32);
+			const captchaText = captcha.text;
 
+			await Postgres.query(`INSERT INTO captchas(cid, captcha_text) VALUES ($1, $2);`, [cid, captchaText]);
+		  
+
+			// Render the login form with the CAPTCHA image
+			const loginForm = `<img src="data:image/svg+xml;base64,${Buffer.from(captcha.data).toString('base64')}" alt="Captcha" />`;
+		  
+			res.status(200).type('text/html').send(loginForm);
+		  });
+	}
 	/** POST /auth/login
 	 *	- 登入
 	**/
@@ -71,10 +90,12 @@ export = async function(fastify:FastifyInstance) {
                 properties: {
 					nid:      { type: 'string' },
                     password: { type: 'string' },
+					captcha:  { type: 'string' },
 				},
 				examples: [{
 					nid: 'S123456789',
 					password: 'password',
+					captcha: '123456'
 				}]
 			}
 		};
@@ -87,19 +108,29 @@ export = async function(fastify:FastifyInstance) {
 			login_time:epoch;
 		};
 
-		fastify.post<{Body:{nid:User['nid'], password:User['password']}, Reply:APIResponse<ResponseType>}>('/login', {schema}, async(req, res)=>{
-			const {nid, password} = req.body;
+		fastify.post<{Body:{nid:User['nid'], password:User['password'], captcha:string}, Reply:APIResponse<ResponseType>}>('/login', {schema}, async(req, res)=>{
+			const {nid, password, captcha} = req.body;
 			
 			
 			{
 				if ( nid === undefined ) {
-					return res.errorHandler(UserError.INVALID_ACCOUNT)
+					return res.errorHandler(LoginError.NID_REQUIRED)
 				} 
 				if ( password === undefined ) {
-					return res.errorHandler(UserError.INVALID_PASSWORD);
+					return res.errorHandler(LoginError.PASSWORD_REQUIRED);
+				}
+				if ( captcha === undefined ) {
+					return res.errorHandler(LoginError.CAPTCHA_REQUIRED);
+				}
+				
+			}
+			// NOTE: check captcha
+			{
+				const {rows:[row]} = await Postgres.query(`SELECT * FROM captchas WHERE captcha_text = $1 AND NOW() <= to_timestamp(expired_time);`, [captcha])
+				if (row === undefined) {
+					return res.errorHandler(LoginError.CAPTCHA_INVALID);
 				}
 			}
-
 			let user_id:string, user_role:string;
 			{
 				// NOTE: check password
@@ -146,7 +177,7 @@ export = async function(fastify:FastifyInstance) {
 			const result = await Postgres.query(sql);
 			console.log(result);
 
-		
+			await Postgres.query(`DELETE FROM captchas WHERE captcha_text = $1;`, [captcha]);
 
 			const REFRESH_INFO:HuntRefreshToken = {
 				tid: TOKEN_INFO.tid,

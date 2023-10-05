@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS "users" (
     volunteer_uid				    VARCHAR(32)         NOT NULL DEFAULT '',
     revoked                         BOOLEAN             NOT NULL DEFAULT false,
     password                        TEXT                NOT NULL,
-	update_time					    INTEGER            	NOT NULL DEFAULT 0,
-    create_time					    INTEGER				NOT NULL DEFAULT extract(epoch from now())
+	update_time					    TIMESTAMPTZ         NOT NULL DEFAULT '',
+    create_time					    TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 );
 
 
@@ -47,7 +47,10 @@ CREATE INDEX IF NOT EXISTS "users#volunteer_id" ON "users" USING brin("volunteer
 CREATE INDEX IF NOT EXISTS "users#relative_path" ON "users" USING gist("relative_path");
 CREATE INDEX IF NOT EXISTS "users#referrer_path" ON "users" USING gist("referrer_path");
 
-
+CREATE TRIGGER trigger_users_update_time
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_update_time();
 
 CREATE OR REPLACE FUNCTION update_referrer_path() 
 RETURNS trigger AS $$
@@ -69,8 +72,8 @@ BEGIN
         NEW.contact_home_number = regexp_replace(NEW.contact_home_number, '(\d{2})-(\d{4})-(\d{3})', '\1\2\3');
 	END IF;
 
-    IF NEW.create_time = 0 THEN
-        NEW.create_time = extract(epoch from now());
+    IF NEW.create_time IS NULL THEN
+        NEW.create_time = NOW();
     END IF;
 
     IF NEW.referrer_uid = '' OR NEW.referrer_uid IS NULL THEN
@@ -104,7 +107,7 @@ BEGIN
     IF OLD.password IS DISTINCT FROM NEW.password THEN
         NEW.password = encode(digest(NEW.password, 'sha1'), 'hex');
         NEW.password = crypt(NEW.password, gen_salt('bf',8));
-        NEW.update_time = extract(epoch from now());
+        NEW.update_time = NOW();
     END IF;
 
     RETURN NEW;
@@ -127,7 +130,16 @@ END;
 $$ LANGUAGE 'plpgsql';
 
 
- 
+-- captchas 
+DROP TABLE IF EXISTS captchas CASCADE;
+CREATE TABLE IF NOT EXISTS captchas (
+	cid 			            VARCHAR(32)         NOT NULL PRIMARY KEY,
+    captcha_text				VARCHAR(6)			NOT NULL,
+	expired_time                INTEGER             NOT NULL DEFAULT extract(epoch from NOW() + interval '5 minutes'),
+	create_time                 TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+
 
 -- login_sessions
 DROP TABLE IF EXISTS login_sessions CASCADE;
@@ -135,16 +147,123 @@ CREATE TABLE IF NOT EXISTS login_sessions (
 	id 			                VARCHAR(32)         NOT NULL PRIMARY KEY,
     uid                         VARCHAR(32)         NOT NULL,
     role						VARCHAR(20)			NOT NULL,
-	revoked 		            BOOLEAN             DEFAULT false,
-	login_time                  INTEGER             DEFAULT extract(epoch from now()),
-	expired_time                INTEGER             DEFAULT extract(epoch from now() + interval '720 hours'),
-	create_time                 INTEGER             DEFAULT extract(epoch from now()),
+	revoked 		            BOOLEAN             NOT NULL DEFAULT false,
+	login_time                  INTEGER             NOT NULL DEFAULT extract(epoch from NOW()),
+	expired_time                INTEGER             NOT NULL DEFAULT extract(epoch from NOW() + interval '30 days'),
+	create_time                 TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 	CONSTRAINT      "login_sessions#uid"        FOREIGN KEY (uid) REFERENCES users(uid)
 );
 CREATE TRIGGER change_login_sessions_login_time BEFORE UPDATE
     ON public.login_sessions FOR EACH ROW 
     EXECUTE PROCEDURE change_login_time();
 
+
+
+
+-- roska_serials
+DROP TABLE IF EXISTS roska_serials CASCADE;
+CREATE TABLE IF NOT EXISTS roska_serials (
+    sid                         VARCHAR(15)		    NOT NULL PRIMARY KEY,
+    uid                         VARCHAR(32)         NOT NULL,
+    basic_unit_amount           DECIMAL             NOT NULL DEFAULT 0,
+    min_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
+    max_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
+    bid_unit_spacing            INTEGER             NOT NULL DEFAULT 0,
+    g_frequency                 SMALLINT            NOT NULL DEFAULT 30,
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+    create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (uid) REFERENCES users(uid)
+);
+CREATE TRIGGER trigger_roska_serials_update_time
+BEFORE UPDATE ON roska_serials
+FOR EACH ROW
+EXECUTE FUNCTION update_update_time();
+
+
+
+-- roska_groups
+DROP TABLE IF EXISTS roska_groups CASCADE;
+CREATE TABLE IF NOT EXISTS roska_groups (
+	gid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
+    sid                         VARCHAR(15)		    NOT NULL,
+    bit_start_time              TIMESTAMPTZ         NOT NULL,
+    bit_end_time                TIMESTAMPTZ         NOT NULL DEFAULT (bit_start_time + INTERVAL '3 days'),
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+    create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (sid) REFERENCES roska_serials(sid)
+);
+CREATE TRIGGER trigger_roska_gruops_update_time
+BEFORE UPDATE ON roska_groups
+FOR EACH ROW
+EXECUTE FUNCTION update_update_time();
+
+
+-- roska_members
+DROP TABLE IF EXISTS roska_members CASCADE;
+CREATE TABLE IF NOT EXISTS roska_members (
+    mid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
+    gid 					    VARCHAR(15)		    NOT NULL,
+    sid                         VARCHAR()
+    uid                         VARCHAR(32)         NOT NULL DEFAULT '',
+    bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
+    win                         BOOLEAN             NOT NULL DEFAULT false,
+    win_time                    TIMESTAMPTZ         NOT NULL DEFAULT '',
+    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
+    installment_deadline        TIMESTAMPTZ         NOT NULL DEFAULT '',
+    joing_time                  TIMESTAMPTZ         NOT NULL DEFAULT '',
+    assignment_path             LTREE               NOT NULL DEFAULT '',
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+    create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (sid) REFERENCES roska_serials(sid),
+    FOREIGN KEY (gid) REFERENCES roska_groups(gid),
+    FOREIGN KEY (sid) REFERENCES roska_groups(sid),
+    FOREIGN KEY (uid) REFERENCES users(uid)
+);
+CREATE TRIGGER trigger_roska_members_update_time
+BEFORE UPDATE ON roska_members
+FOR EACH ROW
+EXECUTE FUNCTION update_update_time();
+
+
+-- history_receipts
+CREATE TABLE IF NOT EXISTS history_receipts (
+    receipt_id                  VARCHAR(32)         NOT NULL PRIMARY KEY,
+    recipient_name              VARCHAR(100)        NOT NULL,
+    amount                      DECIMAL(10, 0)      NOT NULL,
+    payment_date                TIMESTAMPTZ         NOT NULL,
+    payment_method              VARCHAR(50)         NOT NULL,
+    reference_number            VARCHAR(100)        NOT NULL,
+    notes                       TEXT                NOT NULL DEFAULT '',
+    create_time                 TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+
+-- history_remittances
+CREATE TABLE IF NOT EXISTS history_remittances (
+    remittance_id               VARCHAR(32)         NOT NULL PRIMARY KEY,
+    sender_name                 VARCHAR(100)        NOT NULL,
+    recipient_name              VARCHAR(100)        NOT NULL,
+    amount                      DECIMAL(10, 0)      NOT NULL,
+    currency                    VARCHAR(3)          NOT NULL,
+    remittance_date             DATE                NOT NULL,
+    sender_account              VARCHAR(50)         NOT NULL,
+    recipient_account           VARCHAR(50)         NOT NULL,
+    reference_number            VARCHAR(100)        NOT NULL,
+    notes                       TEXT                NOT NULL DEFAULT '',
+    create_time                 TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+-- files
+CREATE TABLE IF NOT EXISTS files (
+    fid                         VARCHAR(32)         NOT NULL PRIMARY KEY,
+    uid                         VARCHAR(32)         NOT NULL,
+    file_path                   VARCHAR(255)        NOT NULL,
+    file_name                   VARCHAR(100)        NOT NULL,
+    encoding                    VARCHAR(100)        NOT NULL,
+    mimetype                    VARCHAR(100)        NOT NULL,
+    create_time                 TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (uid) REFERENCES users(uid)
+);
 
 
 -- payments
@@ -158,8 +277,8 @@ CREATE TABLE IF NOT EXISTS payments (
     bank_account_number			VARCHAR(20)			NOT NULL,
     amount                      DECIMAL             NOT NULL,
     file_link                   VARCHAR(200)        NOT NULL,
-	update_time					INTEGER             NOT NULL DEFAULT 0,
-    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+    create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
 
@@ -173,56 +292,7 @@ CREATE TABLE IF NOT EXISTS banks (
     branch_code             	VARCHAR(7)          NOT NULL DEFAULT '',
 	bank_name					VARCHAR(60)			NOT NULL,
 	branch_path					LTREE				NOT NULL,
-	update_time					INTEGER             NOT NULL DEFAULT 0,
-    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+    create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 	PRIMARY KEY (bank_code, branch_code)
-);
-
--- roska_serials
-DROP TABLE IF EXISTS roska_serials CASCADE;
-CREATE TABLE IF NOT EXISTS roska_serials (
-    sid                         VARCHAR(15)		    NOT NULL PRIMARY KEY,
-    uid                         VARCHAR(32)         NOT NULL,
-    basic_unit_amount           DECIMAL             NOT NULL DEFAULT 0,
-    min_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
-    max_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
-    bid_unit_spacing            INTEGER             NOT NULL DEFAULT 0,
-    g_frequency                 SMALLINT            NOT NULL DEFAULT 30,
-	update_time					INTEGER             NOT NULL DEFAULT 0,
-    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now())
-);
-
-
--- roska_groups
-DROP TABLE IF EXISTS roska_groups CASCADE;
-CREATE TABLE IF NOT EXISTS roska_groups (
-	gid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
-    sid                         VARCHAR(15)		    NOT NULL,
-    bit_start_time              INTEGER             NOT NULL DEFAULT 0,
-    bit_end_time                INTEGER             NOT NULL DEFAULT 0,
-	update_time					INTEGER             NOT NULL DEFAULT 0,
-    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
-    FOREIGN KEY (sid) REFERENCES roska_serials(sid)
-);
-
-
--- roska_members
-DROP TABLE IF EXISTS roska_members CASCADE;
-CREATE TABLE IF NOT EXISTS roska_members (
-    mid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
-    gid 					    VARCHAR(15)		    NOT NULL,
-    sid                         VARCHAR()
-    uid                         VARCHAR(32)         NOT NULL DEFAULT '',
-    bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
-    win                         BOOLEAN             NOT NULL DEFAULT false,
-    win_time                    INTEGER             NOT NULL DEFAULT 0,
-    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
-    installment_deadline        INTEGER             NOT NULL DEFAULT 0,
-    joing_time                  INTEGER             NOT NULL DEFAULT 0,
-    assignment_path             LTREE               NOT NULL DEFAULT '',
-	update_time					INTEGER             NOT NULL DEFAULT 0,
-    create_time					INTEGER				NOT NULL DEFAULT extract(epoch from now()),
-    FOREIGN KEY (gid) REFERENCES roska_groups(gid),
-    FOREIGN KEY (sid) REFERENCES roska_groups(sid),
-    FOREIGN KEY (uid) REFERENCES users(uid)
 );

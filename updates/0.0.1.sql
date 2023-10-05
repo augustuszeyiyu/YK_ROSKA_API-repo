@@ -11,10 +11,10 @@ CREATE EXTENSION IF NOT EXISTS btree_gin;
 
 
 
-CREATE OR REPLACE FUNCTION change_update_time()
+CREATE OR REPLACE FUNCTION update_update_time()
 RETURNS TRIGGER AS $$
 BEGIN
-   NEW.update_time = extract(epoch from now()); 
+   NEW.update_time = NOW(); 
    RETURN NEW;
 END;
 $$ LANGUAGE 'plpgsql';

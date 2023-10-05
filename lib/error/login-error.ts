@@ -3,6 +3,22 @@ export class LoginError {
 		status:400, code:'api#login#login-required',
 		msg:'Login Required!'
 	};
+	public static NID_REQUIRED:HuntErrorItem = {
+		status:400, code:'api#login#nid-required',
+		msg:'NID Required!'
+	};
+	public static PASSWORD_REQUIRED:HuntErrorItem = {
+		status:400, code:'api#login#password-required',
+		msg:'Password Required!'
+	};
+	public static CAPTCHA_REQUIRED:HuntErrorItem = {
+		status:400, code:'api#login#captcha-required',
+		msg:'Captcha Required!'
+	};
+	public static CAPTCHA_INVALID:HuntErrorItem = {
+		status:400, code:'api#login#captcha-invalid',
+		msg:'Captcha invalid!'
+	};
 	public static INVALID_ACCOUNT_OR_PASSWORD:HuntErrorItem = {
 		status:400, code:'api#login#incorrect-account-or-password',
 		msg:'Given account or password is invalid!'
