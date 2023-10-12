@@ -63,7 +63,7 @@ Promise.chain(async()=>{
 				url: 'https://hackmd.io/41FuL6-NQoiRBaZ7MwXrVA',	description: 'Find more info in hackmd'
 			},
 			servers: [
-				{url: `http://${Config.serve_at.host}:${Config.serve_at.port}`,	description: "Localhost server"}
+				{url: `http://${Config.serve_at.host}:${Config.serve_at.port}`,	description: "Localhost server"},
 				{url: `http://139.59.117.209`, description: "beta server"},				
 			],
 			components: {
@@ -132,7 +132,7 @@ Promise.chain(async()=>{
 		})
 		.addHook('preHandler', async(req, reply) => {
 			req.session = { source:'unkown', is_login:false };
-
+			
 
 			let auth_source:LoginSession['source'], raw_token:string;
 			const auth = (req.headers['authorization']||'').trim();
@@ -147,6 +147,8 @@ Promise.chain(async()=>{
 				raw_token = (req.cookies[Config.cookie.cookie_session_id]||'').trim();
 			}
 
+			console.log({raw_token});
+			
 
 			
 			const parsed_token = BWT.ParseBWT<RoskaSessToken>(raw_token, Config.secret.session);

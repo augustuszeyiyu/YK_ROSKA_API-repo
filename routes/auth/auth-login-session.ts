@@ -26,7 +26,8 @@ export = async function(fastify:FastifyInstance) {
         const schema = {
 			description: '取得網頁 cookie, 判斷 cookie 是否過期，如果過期，就需要回傳新的 cookie',
 			summary: '取得網頁 cookie, 判斷 cookie 是否過期，如果過期，就需要回傳新的 cookie',
-			params: {},
+			params:{},
+			security: [{ bearerAuth: [] }],
 		};
 
 		type ResponseType = {
@@ -97,8 +98,8 @@ export = async function(fastify:FastifyInstance) {
 					captcha:  { type: 'string' },
 				},
 				examples: [{
-					nid: 'S123456789',
-					password: 'password',
+					nid: 'A112345555',
+					password: 'Abcd1234',
 					captcha: '123456'
 				}]
 			}
@@ -188,8 +189,7 @@ export = async function(fastify:FastifyInstance) {
 			// NOTE: Query auth info for updating or Insert a new auth document
 			const sql = PGDelegate.format(`INSERT INTO login_sessions(${Object.keys(AUTH_DATA)}) VALUES (${Object.keys(AUTH_DATA).map(e => `{${e}}` ).join(', ')})`, AUTH_DATA);
 			console.log(sql);			
-			const result = await Postgres.query(sql);
-			console.log(result);
+			await Postgres.query(sql);
 
 			await Postgres.query(`DELETE FROM captchas WHERE captcha_text = $1;`, [captcha]);
 
