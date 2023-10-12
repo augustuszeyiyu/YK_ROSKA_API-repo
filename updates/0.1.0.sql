@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 	gender					        VARCHAR(1)			NOT NULL,
 	birth_date 				        DATE 				NOT NULL,
     address                         VARCHAR(100)        NOT NULL DEFAULT '',
-    line_id                         VARCHAR(50)         NOT NULL DEFAULT '',    
+    line_id                         VARCHAR(50)         NOT NULL DEFAULT '',
     contact_home_number			    VARCHAR(12)			NOT NULL DEFAULT '',
     contact_mobile_number			VARCHAR(12)			NOT NULL,
     role						    SMALLINT			NOT NULL DEFAULT 0,
