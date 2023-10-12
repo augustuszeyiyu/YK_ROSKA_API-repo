@@ -87,13 +87,14 @@ export = async function(fastify: FastifyInstance) {
 
 				if (nid === undefined) 		{ return res.status(400).send({msg:'身分證字號必填'}); }
 				else						{ 
-					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE nid=$1;', [nid]);
-					if (row) 				{ return res.status(400).send({msg:'該身分證字號已被註冊'}); }
-					else 
-					if (isValidTaiwanNationalID(nid)=== false || isValidNewResidentID(nid) === false) {
-											return res.status(400).send({msg:'該身分證字號錯誤'});	
-					}
-					else 					{ payload.nid = nid;  }					
+					{ payload.nid = nid;  }
+					// const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE nid=$1;', [nid]);
+					// if (row) 				{ return res.status(400).send({msg:'該身分證字號已被註冊'}); }
+					// else 
+					// if (isValidTaiwanNationalID(nid)=== false || isValidNewResidentID(nid) === false) {
+					// 						return res.status(400).send({msg:'該身分證字號錯誤'});	
+					// }
+					// else 					
 				}
 				
 				if (name === undefined)		{ return res.status(400).send({msg:'姓名必填'}); }

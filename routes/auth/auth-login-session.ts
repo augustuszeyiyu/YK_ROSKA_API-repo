@@ -68,6 +68,8 @@ export = async function(fastify:FastifyInstance) {
 			// Store the CAPTCHA text in a session or database for verification
 			const cid = TrimId.NEW.toString(32);
 			const captchaText = captcha.text;
+			console.log({captchaText});
+			
 
 			await Postgres.query(`INSERT INTO captchas(cid, captcha_text) VALUES ($1, $2);`, [cid, captchaText]);
 		  
