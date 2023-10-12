@@ -26,7 +26,8 @@ export = async function(fastify:FastifyInstance) {
         const schema = {
             description: '管理者搜尋使用者列表',
 			summary: '管理者搜尋使用者列表',
-            querystring: schema_query
+            querystring: schema_query,
+			security: [{ bearerAuth: [] }],
         }
 		const PayloadValidator = $.ajv.compile(schema_query);
 		type PaginateCursorUser = PaginateCursor<{ "uid":string, "name":string, "contact_home_number":string, "contact_mobile_number":string, "create_time":number }[]>;
@@ -182,7 +183,8 @@ export = async function(fastify:FastifyInstance) {
         const schema = {
             description: '管理者搜尋使用者個人資料',
 			summary: '管理者搜尋使用者個人資料',
-            params: schema_params
+            params: schema_params,
+			security: [{ bearerAuth: [] }],
         }
 		const PayloadValidator = $.ajv.compile(schema_params);
 		type ResponseUser= User & {};
@@ -249,6 +251,7 @@ export = async function(fastify:FastifyInstance) {
 			summary: '管理者修改使用者資料',
             params: schema_params,
             body: schema_body,
+			security: [{ bearerAuth: [] }],
 		};
         const PayloadValidator1 = $.ajv.compile(schema_params);
 		const PayloadValidator2 = $.ajv.compile(schema_body);

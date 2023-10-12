@@ -145,15 +145,17 @@ CREATE TABLE IF NOT EXISTS login_sessions (
 	id 			                VARCHAR(32)         NOT NULL PRIMARY KEY,
     uid                         VARCHAR(32)         NOT NULL,
     role						SMALLINT			NOT NULL DEFAULT 0,
-	revoked 		            BOOLEAN             NOT NULL DEFAULT false,
 	login_time                  INTEGER             NOT NULL DEFAULT extract(epoch from NOW()),
 	expired_time                INTEGER             NOT NULL DEFAULT extract(epoch from NOW() + interval '30 days'),
+    revoked 		            BOOLEAN             NOT NULL DEFAULT false,
+    revoked_time                TIMESTAMPTZ,
 	create_time                 TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
-	CONSTRAINT      "login_sessions#uid"        FOREIGN KEY (uid) REFERENCES users(uid)
+	FOREIGN KEY (uid) REFERENCES users(uid)
 );
 CREATE TRIGGER change_login_sessions_login_time BEFORE UPDATE
     ON public.login_sessions FOR EACH ROW 
     EXECUTE PROCEDURE change_login_time();
+
 
 
 

@@ -65,9 +65,17 @@ export = async function(fastify:FastifyInstance) {
 	/** GET /auth/login */
 	{
 		fastify.get('/login', async (req, res) => {
-			// Generate a new CAPTCHA
-			const captcha = svgCaptcha_create({ size: 6, noise: 2, color: true, background: '#f0f0f0' });
-			
+			// Generate a new CAPTCHA	
+			const options = {
+				size: 6,
+				noise: 2,
+				color: true,
+				background: '#f0f0f0',
+				charPreset: '0123456789', // This includes only numeric characters
+			  };
+			  const captcha = svgCaptcha_create(options);
+	
+
 			// Store the CAPTCHA text in a session or database for verification
 			const cid = TrimId.NEW.toString(32);
 			const captchaText = captcha.text;
@@ -227,14 +235,14 @@ export = async function(fastify:FastifyInstance) {
         const schema = {
             description: '登出',
             summary: '登出',
-            params: {}
+            params: {},
+			security: [{ bearerAuth: [] }],
         };
-        fastify.get('/logout', {schema}, async(req, res)=>{
+        fastify.get('/logout', {schema}, async(req, res)=>{			
             if (req.session.is_login === true) {
-                const token = req.session.token!;
-
-                const sql = PGDelegate.format(`UPDATE login_sessions SET revoked={revoked} AND revoked_time={revoked_time} WHERE id={id};`, {id:token.tid, revoked:true, revoked_time: Date.unix()});
-                await Postgres.query(sql);
+                const {tid} = req.session.token!;
+                const sql = PGDelegate.format(`UPDATE login_sessions SET revoked={revoked}, revoked_time=NOW() WHERE id={id};`, {id:tid, revoked:true});
+                await Postgres.query(sql);				
             }
         
             res.setCookie(Config.cookie.cookie_session_id, '', {
