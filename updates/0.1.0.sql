@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS "users" (
     line_id                         VARCHAR(50)         NOT NULL DEFAULT '',    
     contact_home_number			    VARCHAR(12)			NOT NULL DEFAULT '',
     contact_mobile_number			VARCHAR(12)			NOT NULL,
-    role						    VARCHAR(20)			NOT NULL DEFAULT 'user',
+    role						    SMALLINT			NOT NULL DEFAULT 0,
     bank_code					    VARCHAR(3)			NOT NULL,
     branch_code					    VARCHAR(50)			NOT NULL,
     bank_account_name			    VARCHAR(60)			NOT NULL,

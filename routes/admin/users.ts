@@ -240,7 +240,7 @@ export = async function(fastify:FastifyInstance) {
                 contact_home_number:        {type:"string"},
                 contact_mobile_number:      {type:"string"},
                 address:                    {type:"string"},
-                role:                       {type:"string"},
+                role:                       {type:"number"},
             },
 			required:["uid"]
         }
@@ -259,7 +259,7 @@ export = async function(fastify:FastifyInstance) {
             contact_home_number:string,
             contact_mobile_number:string,
             address:string,
-            role:string,
+            role:number,
         };
 		fastify.post<{Params:{uid:User['uid']}, Body:PayloadBody, Reply:object}>('/user/:uid', {schema}, async(req, res)=>{
             if ( !PayloadValidator1(req.params) ) {

@@ -8,7 +8,7 @@ export interface User {
     line_id: string,
     contact_home_number: string,
     contact_mobile_number: string,
-    role: 'admin'|'user'|'volunteer',
+    role: number,
     bank_code: string,
     branch_code: string,
     bank_account_name: string,
