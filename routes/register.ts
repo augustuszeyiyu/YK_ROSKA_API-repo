@@ -56,7 +56,7 @@ export = async function(fastify: FastifyInstance) {
 					"emergency_contact": "王大明",
 					"emergency_contact_number": "0935088881",
 					"emergency_contact_relation": "父子",
-					"password": "1234"
+					"password": "Abcd1234"
 				}]
 			},
 			

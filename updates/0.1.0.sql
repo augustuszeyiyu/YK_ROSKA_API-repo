@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS "users" (
     referrer_uid					VARCHAR(32)         NOT NULL DEFAULT '',
 	referrer_path				    LTREE				DEFAULT NULL,
     volunteer_uid				    VARCHAR(32)         NOT NULL DEFAULT '',
+    volunteer_path				    LTREE				DEFAULT NULL,
     revoked                         BOOLEAN             NOT NULL DEFAULT false,
     password                        TEXT                NOT NULL,
 	update_time					    TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
@@ -82,10 +83,6 @@ BEGIN
 		SELECT referrer_path||NEW.uid::ltree INTO NEW.referrer_path from users WHERE uid = NEW.referrer_uid;  
 	END IF;
 
-    IF role = 'volunteer' THEN
-        NEW.volunteer_path = 'root'::ltree||NEW.uid::ltree;
-    END IF;
-
     IF NEW.volunteer_uid IS NOT NULL THEN
 		SELECT volunteer_path||NEW.uid::ltree INTO NEW.volunteer_path from users WHERE uid = NEW.volunteer_uid;  
 	END IF;
@@ -121,13 +118,14 @@ CREATE TRIGGER update_user_password BEFORE UPDATE
 
 DROP FUNCTION IF EXISTS verify_password(text, text);
 CREATE OR REPLACE FUNCTION verify_password(user_nid text, user_pass text)
-RETURNS TABLE (uid varchar(32), role varchar(20)) AS $$
+RETURNS TABLE (uid varchar(32), role SMALLINT) AS $$
 BEGIN
     user_pass = encode(digest(user_pass, 'sha1'), 'hex');
-    RETURN QUERY SELECT uid, role FROM users
-    WHERE nid = user_nid AND password = crypt(user_pass, password);
+    RETURN QUERY SELECT u.uid, u.role FROM users u
+    WHERE u.nid = user_nid AND u.password = crypt(user_pass, u.password);
 END;
 $$ LANGUAGE 'plpgsql';
+
 
 
 -- captchas 

@@ -35,6 +35,8 @@ export = async function(fastify:FastifyInstance) {
 			expired_time: 	number;
 		};
 		fastify.get('/session', {schema}, async(req, res)=>{
+			console.log(req.session.token);
+			
 			if (!req.session.is_login) return res.errorHandler( BaseError.UNAUTHORIZED_ACCESS );
 			
 
@@ -118,17 +120,9 @@ export = async function(fastify:FastifyInstance) {
 				if ( nid === undefined ) {
 					return res.errorHandler(LoginError.NID_REQUIRED)
 				}
-				else 
-				if (isValidTaiwanNationalID(nid) === false && isValidNewResidentID(nid)) {
-					return res.errorHandler(UserError.INVALID_ACCOUNT_FORMAT);
-				}
 
 				if ( password === undefined ) {
 					return res.errorHandler(LoginError.PASSWORD_REQUIRED);
-				}
-				else
-				if ( isValidPassword(password) ) {
-					return res.errorHandler(UserError.INVALID_PASSWORD_FORMAT);
 				}
 
 				if ( captcha === undefined ) {
@@ -207,7 +201,9 @@ export = async function(fastify:FastifyInstance) {
 			console.log(refresh_token);
 
 
-			res.setCookie(Config.cookie.cookie_session_id, token, {
+			res
+			.header('Authorization', refresh_token)
+			.setCookie(Config.cookie.cookie_session_id, token, {
 				path:'/',
 				httpOnly:true,
 				expires:new Date(AUTH_DATA.expired_time*1000),

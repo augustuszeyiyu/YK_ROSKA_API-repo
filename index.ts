@@ -62,16 +62,16 @@ Promise.chain(async()=>{
 			externalDocs: {
 				url: 'https://hackmd.io/41FuL6-NQoiRBaZ7MwXrVA',	description: 'Find more info in hackmd'
 			},
-			servers: [{url: `http://139.59.117.209`, description: "beta server"},
-					  {url: `http://${Config.serve_at.host}:${Config.serve_at.port}`,	description: "Localhost server"}
-					],
+			servers: [
+				{url: `http://${Config.serve_at.host}:${Config.serve_at.port}`,	description: "Localhost server"}
+				{url: `http://139.59.117.209`, description: "beta server"},				
+			],
 			components: {
 				securitySchemes: {
-					cookieAuth: {
-						type: 'apiKey',
-						in: 'cookie',
-						name: Config.cookie.cookie_session_id,
-					}
+					bearerAuth: {   // Change the name to a suitable one, e.g., 'bearerAuth'
+						type: 'http',
+						scheme: 'bearer',
+					},
 				},
 			}
 		}
