@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS "users" (
     volunteer_uid				    VARCHAR(32)         NOT NULL DEFAULT '',
     revoked                         BOOLEAN             NOT NULL DEFAULT false,
     password                        TEXT                NOT NULL,
-	update_time					    TIMESTAMPTZ         NOT NULL DEFAULT '',
-    create_time					    TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+	update_time					    TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    create_time					    TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );
 
 
@@ -163,14 +163,14 @@ CREATE TRIGGER change_login_sessions_login_time BEFORE UPDATE
 -- roska_serials
 DROP TABLE IF EXISTS roska_serials CASCADE;
 CREATE TABLE IF NOT EXISTS roska_serials (
-    sid                         VARCHAR(15)		    NOT NULL PRIMARY KEY,
+    sid                         VARCHAR(6)		    NOT NULL PRIMARY KEY,
     uid                         VARCHAR(32)         NOT NULL,
     basic_unit_amount           DECIMAL             NOT NULL DEFAULT 0,
     min_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
     max_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
     bid_unit_spacing            INTEGER             NOT NULL DEFAULT 0,
     g_frequency                 SMALLINT            NOT NULL DEFAULT 30,
-	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
@@ -184,39 +184,57 @@ EXECUTE FUNCTION update_update_time();
 -- roska_groups
 DROP TABLE IF EXISTS roska_groups CASCADE;
 CREATE TABLE IF NOT EXISTS roska_groups (
-	gid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
-    sid                         VARCHAR(15)		    NOT NULL,
+	gid 					    VARCHAR(13)		    NOT NULL PRIMARY KEY,
+    sid                         VARCHAR(6)		    NOT NULL,
     bit_start_time              TIMESTAMPTZ         NOT NULL,
-    bit_end_time                TIMESTAMPTZ         NOT NULL DEFAULT (bit_start_time + INTERVAL '3 days'),
-	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+    bit_end_time                TIMESTAMPTZ,
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid)
 );
+CREATE INDEX IF NOT EXISTS "roska_groups#sid" on roska_groups(sid);
+
 CREATE TRIGGER trigger_roska_gruops_update_time
 BEFORE UPDATE ON roska_groups
 FOR EACH ROW
 EXECUTE FUNCTION update_update_time();
 
+-- Create a BEFORE INSERT trigger to set the default value for bit_end_time
+CREATE OR REPLACE FUNCTION set_bit_end_time()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.bit_end_time := NEW.bit_start_time + INTERVAL '3 days';
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach the trigger to the roska_groups table
+CREATE TRIGGER set_bit_end_time_trigger
+BEFORE INSERT ON roska_groups
+FOR EACH ROW
+EXECUTE FUNCTION set_bit_end_time();
+
+
+
 
 -- roska_members
 DROP TABLE IF EXISTS roska_members CASCADE;
 CREATE TABLE IF NOT EXISTS roska_members (
-    mid 					    VARCHAR(15)		    NOT NULL PRIMARY KEY,
-    gid 					    VARCHAR(15)		    NOT NULL,
-    sid                         VARCHAR()
+    mid 					    VARCHAR(16)		    NOT NULL PRIMARY KEY,
+    gid 					    VARCHAR(13)		    NOT NULL,
+    sid                         VARCHAR(6)			NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
     bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win                         BOOLEAN             NOT NULL DEFAULT false,
-    win_time                    TIMESTAMPTZ         NOT NULL DEFAULT '',
+    win_time                    TIMESTAMPTZ,
     installment_amount          DECIMAL             NOT NULL DEFAULT 0,
-    installment_deadline        TIMESTAMPTZ         NOT NULL DEFAULT '',
-    joing_time                  TIMESTAMPTZ         NOT NULL DEFAULT '',
+    installment_deadline        TIMESTAMPTZ,
+    joing_time                  TIMESTAMPTZ,
     assignment_path             LTREE               NOT NULL DEFAULT '',
-	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid),
     FOREIGN KEY (gid) REFERENCES roska_groups(gid),
-    FOREIGN KEY (sid) REFERENCES roska_groups(sid),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
 CREATE TRIGGER trigger_roska_members_update_time
@@ -224,8 +242,32 @@ BEFORE UPDATE ON roska_members
 FOR EACH ROW
 EXECUTE FUNCTION update_update_time();
 
+-- Create a trigger function to update win_time and installment_deadline
+CREATE OR REPLACE FUNCTION update_win_time_and_deadline()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.win = true THEN
+        NEW.win_time := NOW();
+        NEW.installment_deadline := NOW() + INTERVAL '3 days';
+        -- Set the time part to 23:59:59
+        NEW.installment_deadline := DATE_TRUNC('day', NEW.installment_deadline) + INTERVAL '3 days - 1 second';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach the trigger to the roska_members table
+CREATE TRIGGER trigger_roska_members_update_win_time
+BEFORE UPDATE ON roska_members
+FOR EACH ROW
+EXECUTE FUNCTION update_win_time_and_deadline();
+
+
+
+
 
 -- history_receipts
+DROP TABLE IF EXISTS history_receipts CASCADE;
 CREATE TABLE IF NOT EXISTS history_receipts (
     receipt_id                  VARCHAR(32)         NOT NULL PRIMARY KEY,
     recipient_name              VARCHAR(100)        NOT NULL,
@@ -239,13 +281,14 @@ CREATE TABLE IF NOT EXISTS history_receipts (
 
 
 -- history_remittances
+DROP TABLE IF EXISTS history_remittances CASCADE;
 CREATE TABLE IF NOT EXISTS history_remittances (
     remittance_id               VARCHAR(32)         NOT NULL PRIMARY KEY,
     sender_name                 VARCHAR(100)        NOT NULL,
     recipient_name              VARCHAR(100)        NOT NULL,
     amount                      DECIMAL(10, 0)      NOT NULL,
     currency                    VARCHAR(3)          NOT NULL,
-    remittance_date             DATE                NOT NULL,
+    remittance_date             TIMESTAMPTZ         NOT NULL,
     sender_account              VARCHAR(50)         NOT NULL,
     recipient_account           VARCHAR(50)         NOT NULL,
     reference_number            VARCHAR(100)        NOT NULL,
@@ -254,6 +297,7 @@ CREATE TABLE IF NOT EXISTS history_remittances (
 );
 
 -- files
+DROP TABLE IF EXISTS files CASCADE;
 CREATE TABLE IF NOT EXISTS files (
     fid                         VARCHAR(32)         NOT NULL PRIMARY KEY,
     uid                         VARCHAR(32)         NOT NULL,
@@ -277,7 +321,7 @@ CREATE TABLE IF NOT EXISTS payments (
     bank_account_number			VARCHAR(20)			NOT NULL,
     amount                      DECIMAL             NOT NULL,
     file_link                   VARCHAR(200)        NOT NULL,
-	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
@@ -287,12 +331,13 @@ CREATE INDEX IF NOT EXISTS "payments#uid" on payments(uid);
 
 
 -- banks
+DROP TABLE IF EXISTS banks CASCADE;
 CREATE TABLE IF NOT EXISTS banks (
 	bank_code 					VARCHAR(3)			NOT NULL,
     branch_code             	VARCHAR(7)          NOT NULL DEFAULT '',
 	bank_name					VARCHAR(60)			NOT NULL,
 	branch_path					LTREE				NOT NULL,
-	update_time					TIMESTAMPTZ         NOT NULL DEFAULT '',
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
 	PRIMARY KEY (bank_code, branch_code)
 );
