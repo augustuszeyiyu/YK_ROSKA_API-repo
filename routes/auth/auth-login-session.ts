@@ -142,7 +142,7 @@ export = async function(fastify:FastifyInstance) {
 				}
 			}
 			// NOTE: check nid and password
-			let user_id:string, user_role:string;
+			let user_id:string, user_role:number;
 			{
 				try {
 					const {rows:[USER]} = await Postgres.query<{uid:User['uid'], role:User['role']}>(`SELECT uid, role FROM users WHERE nid=$1;`, [nid]);

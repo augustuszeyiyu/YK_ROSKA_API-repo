@@ -20,7 +20,7 @@ export interface ConfigFormat {
 		domain: string,
 		cookie_session_id: string,
 	}
-	storage_root: '/tmp',	
+	storage_root: string,	
 };
 
 // The default values

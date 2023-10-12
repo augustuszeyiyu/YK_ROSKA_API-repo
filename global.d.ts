@@ -63,7 +63,7 @@ declare global {
 	type RoskaSessToken = {
 		tid: string, 	// token's corresponding unique id
 		uid: string, 	// related user's unique id
-		role: string,
+		role: number,
 		iss: string, 	// issuer
 		iat: number, 	// epoch timestamp
 		exp: number 	// expired time - epoch timestamp

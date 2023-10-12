@@ -14,12 +14,12 @@ export = async function(fastify: FastifyInstance) {
 			summary: '搜尋組團',
             params: {
                 type: 'object',
-                properties:[]
+                properties:{}
             },
 		};
 
         fastify.get('/group', {schema}, async (req, res)=>{
-            const {rows:[row]} = await Postgres.query(`SELECT * FROM roska_goups ORDER BY`)
+            const {rows:[row]} = await Postgres.query(`SELECT * FROM roska_goups ORDER BY gid DESC`);
         });
     }
 
