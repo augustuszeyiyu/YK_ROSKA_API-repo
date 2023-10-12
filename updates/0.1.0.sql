@@ -146,7 +146,7 @@ DROP TABLE IF EXISTS login_sessions CASCADE;
 CREATE TABLE IF NOT EXISTS login_sessions (
 	id 			                VARCHAR(32)         NOT NULL PRIMARY KEY,
     uid                         VARCHAR(32)         NOT NULL,
-    role						VARCHAR(20)			NOT NULL,
+    role						SMALLINT			NOT NULL DEFAULT 0,
 	revoked 		            BOOLEAN             NOT NULL DEFAULT false,
 	login_time                  INTEGER             NOT NULL DEFAULT extract(epoch from NOW()),
 	expired_time                INTEGER             NOT NULL DEFAULT extract(epoch from NOW() + interval '30 days'),
