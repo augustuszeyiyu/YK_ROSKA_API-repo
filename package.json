@@ -28,7 +28,9 @@
     "extes": "^4.2.1",
     "fastify": "^4.18.0",
     "fastify-multer": "^2.0.3",
+    "i": "^0.3.7",
     "jsonwebtoken": "^9.0.0",
+    "npm": "^10.2.0",
     "open": "^9.1.0",
     "path": "^0.12.7",
     "pg": "^8.11.1",
@@ -38,6 +40,8 @@
     "reroot": "^1.5.1",
     "shared-storage": "github:JCloudYu/shared-storage#c45e6611deccd28b1cf77421a7e948b486dda8f0",
     "svg-captcha": "^1.4.0",
+    "taiwan-bank-data": "^1.6.32023930",
+    "taiwan-id-validator": "^1.5.0",
     "trimid": "^4.1.0",
     "updator": "^0.9.0"
   },
