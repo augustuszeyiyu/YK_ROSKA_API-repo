@@ -1,12 +1,12 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaGroups, RoskaGroupsRequiredInfo, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
+import { GroupFrequency, RoskaGroups, RoskaGroupsRequiredInfo, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
 import { BaseError } from "/lib/error";
-import { INT_POSSITIVE_STR_FORMAT } from "/data-type/common-helpers";
+import { GenWhiteListPattern, INT_POSSITIVE_STR_FORMAT } from "/data-type/common-helpers";
 
 
 export = async function(fastify: FastifyInstance) {
@@ -20,7 +20,7 @@ export = async function(fastify: FastifyInstance) {
                 min_bid_amount:     {type: "number"},
                 max_bid_amount:     {type: "number"},
                 bid_unit_spacing:   {type: "number"},
-                g_frequency:        {type: "number"},
+                frequency:          {type: "string", pattern: GenWhiteListPattern([...Object.keys(GroupFrequency)]).source },
                 bit_start_time:     {type: "string"},
             },
             required: ['basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'g_frequency', 'bit_start_time']
@@ -29,7 +29,19 @@ export = async function(fastify: FastifyInstance) {
         const schema = {
 			description: '產會組序號，比如: YA0034，和一組新的會組編號',
 			summary: '產會組序號，比如: YA0034，和一組新的會組編號',
-            body: schema_body,
+            body: Object.assign(
+                schema_body, { 
+                examples:[
+                    {
+                        member_count:25,
+                        basic_unit_amount: 5000,
+                        min_bid_amount: 200,
+                        max_bid_amount: 1000,
+                        bid_unit_spacing: 200,
+                        frequency: 'monthly'
+                    }
+                ]
+            }),
             security: [{ bearerAuth: [] }],
 		};
 
@@ -53,11 +65,11 @@ export = async function(fastify: FastifyInstance) {
             
         
 
-            const {member_count, basic_unit_amount, min_bid_amount, max_bid_amount, bid_unit_spacing, g_frequency} = req.body;
+            const {member_count, basic_unit_amount, min_bid_amount, max_bid_amount, bid_unit_spacing, frequency} = req.body;
             const payload:Partial<RoskaSerials> = {sid, uid};
 
             {
-                if (member_count !== undefined)         { 
+                if (member_count !== undefined)         {
                                                           payload.member_count = member_count;
                                                           payload.cycles = member_count-1;
                 }
@@ -65,7 +77,8 @@ export = async function(fastify: FastifyInstance) {
                 if (min_bid_amount !== undefined)       { payload.min_bid_amount = min_bid_amount; }
                 if (max_bid_amount !== undefined)       { payload.max_bid_amount = max_bid_amount; }
                 if (bid_unit_spacing !== undefined)     { payload.bid_unit_spacing = bid_unit_spacing; }
-                if (g_frequency !== undefined)          { payload.g_frequency = g_frequency; }
+                if (frequency !== undefined && Object.keys(GroupFrequency).includes(frequency) === true)            
+                                                        { payload.frequency = frequency; }
             }
             
             const sql = PGDelegate.format(`

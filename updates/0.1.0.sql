@@ -191,11 +191,11 @@ DECLARE
 BEGIN
     IF NEW.frequency = 'monthly' THEN
         duration := NEW.member_count; -- Use the member_count as the duration
-        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + INTERVAL duration || ' month - 1 second';
+        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' months'::INTERVAL) - INTERVAL '1 second';
     ELSIF NEW.frequency = 'biweekly' THEN
         duration := NEW.member_count * 2; -- Biweekly, so multiply by 2
-        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + INTERVAL duration || ' week - 1 second';
-    END IF;    
+        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' weeks'::INTERVAL) - INTERVAL '1 second';
+    END IF;  
     
     RETURN NEW;
 END;

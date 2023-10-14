@@ -1,5 +1,7 @@
 import { User } from "./users";
 
+export const GroupFrequency = Object.freeze({M:'monthly',B:'biweekly'} as const);
+export type GroupFrequencys = typeof GroupFrequency[keyof typeof GroupFrequency];
 export interface RoskaSerials {
     sid: uniqid,
     uid: User['uid'],
@@ -9,7 +11,7 @@ export interface RoskaSerials {
     min_bid_amount: number,
     max_bid_amount: number,
     bid_unit_spacing: number,
-    g_frequency: number,
+    frequency: GroupFrequencys,
     bit_start_time: string,
     bit_end_time: string,
     update_time: string,
