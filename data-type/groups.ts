@@ -3,23 +3,27 @@ import { User } from "./users";
 export interface RoskaSerials {
     sid: uniqid,
     uid: User['uid'],
+    member_count: number,
+    cycles: number,
     basic_unit_amount: number,
     min_bid_amount: number,
     max_bid_amount: number,
     bid_unit_spacing: number,
     g_frequency: number,
-    update_time: epoch,
-    create_time: epoch,
+    bit_start_time: string,
+    bit_end_time: string,
+    update_time: string,
+    create_time: string,
 }
 export type RoskaSerialsRequiredInfo = Omit<RoskaSerials, 'sid'|'uid'|'update_time'|'create_time'>;
 
 export interface RoskaGroups {
     gid: uniqid,
     sid: uniqid,
-    bit_start_time: number,
-    bit_end_time: number,
-    update_time: epoch,
-    create_time: epoch,
+    bit_start_time: string,
+    bit_end_time: string,
+    update_time: string,
+    create_time: string,
 }
 export type RoskaGroupsRequiredInfo = Omit<RoskaGroups, 'gid'|'sid'|'update_time'|'create_time'>;
 
@@ -30,11 +34,11 @@ export interface RoskaMembers {
     uid: User['uid'],
     bid_amount: number,
     win: boolean,
-    win_time: epoch,
+    win_time: string,
     installment_amount: number,
-    installment_deadline: epoch,
-    joing_time: epoch,
+    installment_deadline: string,
+    joing_time: string,
     assignment_path: string,
-    update_time: epoch,
-    create_time: epoch,
+    update_time: string,
+    create_time: string,
 }

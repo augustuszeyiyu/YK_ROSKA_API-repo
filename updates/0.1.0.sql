@@ -165,11 +165,15 @@ DROP TABLE IF EXISTS roska_serials CASCADE;
 CREATE TABLE IF NOT EXISTS roska_serials (
     sid                         VARCHAR(6)		    NOT NULL PRIMARY KEY,
     uid                         VARCHAR(32)         NOT NULL,
+    member_count                SMALLINT            NOT NULL DEFAULT 25,
+    cycles                      SMALLINT            NOT NULL DEFAULT 24,
     basic_unit_amount           DECIMAL             NOT NULL DEFAULT 0,
     min_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
     max_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
     bid_unit_spacing            INTEGER             NOT NULL DEFAULT 0,
-    g_frequency                 SMALLINT            NOT NULL DEFAULT 30,
+    frequency                   VARCHAR(6)          NOT NULL DEFAULT 'monthly',
+    bit_start_time              TIMESTAMPTZ         NOT NULL,
+    bit_end_time                TIMESTAMPTZ         NOT NULL,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)
@@ -179,6 +183,34 @@ BEFORE UPDATE ON roska_serials
 FOR EACH ROW
 EXECUTE FUNCTION update_update_time();
 
+-- Create a BEFORE INSERT trigger to set the default value for bit_end_time
+CREATE OR REPLACE FUNCTION set_roska_serials_bit_end_time()
+RETURNS TRIGGER AS $$
+DECLARE
+    duration INT;
+BEGIN
+    IF NEW.frequency = 'monthly' THEN
+        duration := NEW.member_count; -- Use the member_count as the duration
+        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + INTERVAL duration || ' month - 1 second';
+    ELSIF NEW.frequency = 'biweekly' THEN
+        duration := NEW.member_count * 2; -- Biweekly, so multiply by 2
+        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + INTERVAL duration || ' week - 1 second';
+    END IF;    
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach the trigger to the roska_serials table
+CREATE TRIGGER set_roska_serials_bit_end_time_trigger
+BEFORE INSERT OR UPDATE ON roska_serials
+FOR EACH ROW
+EXECUTE FUNCTION set_roska_serials_bit_end_time();
+
+
+
+
+
 
 
 -- roska_groups
@@ -187,7 +219,7 @@ CREATE TABLE IF NOT EXISTS roska_groups (
 	gid 					    VARCHAR(13)		    NOT NULL PRIMARY KEY,
     sid                         VARCHAR(6)		    NOT NULL,
     bit_start_time              TIMESTAMPTZ         NOT NULL,
-    bit_end_time                TIMESTAMPTZ,
+    bit_end_time                TIMESTAMPTZ         NOT NULL,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid)
@@ -200,19 +232,20 @@ FOR EACH ROW
 EXECUTE FUNCTION update_update_time();
 
 -- Create a BEFORE INSERT trigger to set the default value for bit_end_time
-CREATE OR REPLACE FUNCTION set_bit_end_time()
+CREATE OR REPLACE FUNCTION set_roska_groups_bit_end_time()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.bit_end_time := NEW.bit_start_time + INTERVAL '3 days';
+    -- Set the time part to 23:59:59
+    NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + INTERVAL '4 days - 1 second';
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Attach the trigger to the roska_groups table
-CREATE TRIGGER set_bit_end_time_trigger
-BEFORE INSERT ON roska_groups
+CREATE TRIGGER set_roska_groups_bit_end_time_trigger
+BEFORE INSERT OR UPDATE ON roska_groups
 FOR EACH ROW
-EXECUTE FUNCTION set_bit_end_time();
+EXECUTE FUNCTION set_roska_groups_bit_end_time();
 
 
 
@@ -225,7 +258,7 @@ CREATE TABLE IF NOT EXISTS roska_members (
     sid                         VARCHAR(6)			NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
     bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
-    win                         BOOLEAN             NOT NULL DEFAULT false,
+    win                         BOOLEAN,
     win_time                    TIMESTAMPTZ,
     installment_amount          DECIMAL             NOT NULL DEFAULT 0,
     installment_deadline        TIMESTAMPTZ,
@@ -246,12 +279,13 @@ EXECUTE FUNCTION update_update_time();
 CREATE OR REPLACE FUNCTION update_win_time_and_deadline()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.win = true THEN
-        NEW.win_time := NOW();
-        NEW.installment_deadline := NOW() + INTERVAL '3 days';
+    IF NEW.win = false THEN
         -- Set the time part to 23:59:59
-        NEW.installment_deadline := DATE_TRUNC('day', NEW.installment_deadline) + INTERVAL '3 days - 1 second';
+        NEW.installment_deadline := DATE_TRUNC('day', NEW.win_time) + INTERVAL '4 days - 1 second';
+    ELSEIF NEW.win = true THEN
+      NEW.win_time := NOW();
     END IF;
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
