@@ -210,7 +210,7 @@ export = async function(fastify:FastifyInstance) {
 
 
 			res
-			.header('Authorization', refresh_token)
+			.header('Authorization', token)
 			.setCookie(Config.cookie.cookie_session_id, token, {
 				path:'/',
 				httpOnly:true,
