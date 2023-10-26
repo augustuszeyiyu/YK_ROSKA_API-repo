@@ -64,7 +64,12 @@ export = async function(fastify:FastifyInstance) {
 	}
 	/** GET /auth/login */
 	{
-		fastify.get('/login', async (req, res) => {
+		const schema = {
+			description: '取得驗證碼',
+			summary: '取得驗證碼',
+			params:{},
+		};
+		fastify.get('/login', {schema}, async (req, res) => {
 			// Generate a new CAPTCHA	
 			const options = {
 				size: 6,
