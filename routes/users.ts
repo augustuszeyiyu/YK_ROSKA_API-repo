@@ -11,6 +11,7 @@ export = async function(fastify: FastifyInstance) {
 			description: '取得使用者自己的資料',
 			summary: '取得使用者自己的資料',
 			params: {
+				type: 'object',
 				properties: {}
 			},
 		};
@@ -142,7 +143,6 @@ export = async function(fastify: FastifyInstance) {
 			description: '刪除使用者資料',
 			summary: '刪除使用者資料',
 			params: {
-				description: '刪除使用者資料',
 				type: 'object',
 				properties: {
 					uid: { type: 'string' },

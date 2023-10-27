@@ -11,7 +11,6 @@ export = async function(fastify: FastifyInstance) {
 			summary: 'Get version from package.json',
 			response: {
 				200: {
-					description: 'Successful response',
 					type: 'object',
 					properties: {
 						version: { type: 'string' }
