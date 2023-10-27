@@ -93,7 +93,7 @@ export = async function(fastify:FastifyInstance) {
 			// Render the login form with the CAPTCHA image
 			const loginForm = `<img src="data:image/svg+xml;base64,${Buffer.from(captcha.data).toString('base64')}" alt="Captcha" />`;
 		  
-			res.header('Access-Control-Allow-Origin', '*').send({image:loginForm});
+			res.status(200).send({image:loginForm});
 		  });
 	}
 	/** POST /auth/login
@@ -215,7 +215,6 @@ export = async function(fastify:FastifyInstance) {
 
 
 			res
-			.header('Access-Control-Allow-Origin', '*')
 			.header('Authorization', token)
 			.setCookie(Config.cookie.cookie_session_id, token, {
 				path:'/',
