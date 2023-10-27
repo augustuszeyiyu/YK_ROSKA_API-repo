@@ -109,6 +109,13 @@ Promise.chain(async()=>{
 	
 	.register((await import('@fastify/static')).default, {root:`/home/cheny/upload_cache`, prefix:'/file', decorateReply:true})
 
+	.register((await import('@fastify/cors')).default, {
+		origin: `http://127.0.0.1:5500`, // Replace with your actual origin
+		methods: ['GET', 'POST', 'DELETE', 'OPTION'],
+		allowedHeaders: ['Content-Type'],
+		credentials: true,
+	})
+
 	.register(async(fastify, opts)=>{
 		
 		fastify.decorateReply('errorHandler', function(error_info:any, detail?:any) {
@@ -123,8 +130,8 @@ Promise.chain(async()=>{
 
 
 		fastify
-		.addHook('preHandler', async(req, reply)=>{
-			reply.header('Access-Control-Allow-Origin', '*');
+		.addHook('preHandler', async(req, res)=>{
+			res.header('Access-Control-Allow-Origin', '*');
 		})
 		.addHook('preHandler', async(req)=>{
 			req.time_milli = Date.now();
