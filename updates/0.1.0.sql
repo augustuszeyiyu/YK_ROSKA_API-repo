@@ -163,7 +163,7 @@ CREATE TRIGGER change_login_sessions_login_time BEFORE UPDATE
 -- roska_serials
 DROP TABLE IF EXISTS roska_serials CASCADE;
 CREATE TABLE IF NOT EXISTS roska_serials (
-    sid                         VARCHAR(6)		    NOT NULL PRIMARY KEY,
+    sid                         VARCHAR(13)		    NOT NULL PRIMARY KEY,
     uid                         VARCHAR(32)         NOT NULL,
     member_count                SMALLINT            NOT NULL DEFAULT 25,
     cycles                      SMALLINT            NOT NULL DEFAULT 24,
@@ -178,6 +178,8 @@ CREATE TABLE IF NOT EXISTS roska_serials (
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
+
+
 CREATE TRIGGER trigger_roska_serials_update_time
 BEFORE UPDATE ON roska_serials
 FOR EACH ROW
@@ -216,8 +218,8 @@ EXECUTE FUNCTION set_roska_serials_bit_end_time();
 -- roska_groups
 DROP TABLE IF EXISTS roska_groups CASCADE;
 CREATE TABLE IF NOT EXISTS roska_groups (
-	gid 					    VARCHAR(13)		    NOT NULL PRIMARY KEY,
-    sid                         VARCHAR(6)		    NOT NULL,
+	gid 					    VARCHAR(3)		    NOT NULL PRIMARY KEY,
+    sid                         VARCHAR(13)		    NOT NULL,
     bit_start_time              TIMESTAMPTZ         NOT NULL,
     bit_end_time                TIMESTAMPTZ         NOT NULL,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
@@ -253,13 +255,15 @@ EXECUTE FUNCTION set_roska_groups_bit_end_time();
 -- roska_members
 DROP TABLE IF EXISTS roska_members CASCADE;
 CREATE TABLE IF NOT EXISTS roska_members (
-    mid 					    VARCHAR(16)		    NOT NULL PRIMARY KEY,
-    gid 					    VARCHAR(13)		    NOT NULL,
-    sid                         VARCHAR(6)			NOT NULL,
+    mid 					    VARCHAR(20)		    NOT NULL PRIMARY KEY,
+    gid 					    VARCHAR(3)		    NOT NULL,
+    sid                         VARCHAR(13)			NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
     bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win                         BOOLEAN,
+    win_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win_time                    TIMESTAMPTZ,
+    transition                  SMALLINT            NOT NULL DEFAULT 0,
     installment_amount          DECIMAL             NOT NULL DEFAULT 0,
     installment_deadline        TIMESTAMPTZ,
     joing_time                  TIMESTAMPTZ,
@@ -270,6 +274,12 @@ CREATE TABLE IF NOT EXISTS roska_members (
     FOREIGN KEY (gid) REFERENCES roska_groups(gid),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
+--不轉讓 有得標 (transition=0)
+-- (死會數  * basic_unit_amount) + (活會數 ＊ (basic_unit_amount-bid_amount)) 
+
+--有轉讓 有得標 (transition=1)
+-- (死會數  * basic_unit_amount) - ((會期數 ＊ handling_fee) - transition_fee + Interest_bonus) 
+
 CREATE TRIGGER trigger_roska_members_update_time
 BEFORE UPDATE ON roska_members
 FOR EACH ROW
