@@ -124,11 +124,11 @@ Promise.chain(async()=>{
 
 		fastify
 		.addHook('preHandler', async(req, reply)=>{
-			// reply.header('Access-Control-Allow-Origin', '*');
+			reply.header('Access-Control-Allow-Origin', '*');
 		})
 		.addHook('preHandler', async(req)=>{
-			// req.time_milli = Date.now();
-			// req.time = Math.floor(req.time_milli/1000);
+			req.time_milli = Date.now();
+			req.time = Math.floor(req.time_milli/1000);
 		})
 		.addHook('preHandler', async(req, reply) => {
 			req.session = { source:'unkown', is_login:false };
