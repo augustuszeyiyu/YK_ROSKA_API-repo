@@ -22,6 +22,7 @@ import BWT from '/lib/web-token.js';
 // Load configuration file ASAP
 import payload = require('/package.json');
 import Config from '/config.default.js';
+import { log } from 'console';
 
 
 
@@ -110,9 +111,9 @@ Promise.chain(async()=>{
 	.register((await import('@fastify/static')).default, {root:`/home/cheny/upload_cache`, prefix:'/file', decorateReply:true})
 
 	.register((await import('@fastify/cors')).default, {
-		origin: `http://127.0.0.1:5500`, // Replace with your actual origin
+		origin: Config.serve_at.url, // Replace with your actual origin
 		methods: ['GET', 'POST', 'DELETE', 'OPTION'],
-		allowedHeaders: ['Content-Type'],
+		allowedHeaders: ['Authorization', 'Content-Type'],
 		credentials: true,
 	})
 
@@ -131,18 +132,20 @@ Promise.chain(async()=>{
 
 		fastify
 		.addHook('preHandler', async(req, res)=>{
-			res.header('Access-Control-Allow-Origin', '*');
+			res.header('Access-Control-Allow-Origin', Config.serve_at.url);
 		})
 		.addHook('preHandler', async(req)=>{
 			req.time_milli = Date.now();
 			req.time = Math.floor(req.time_milli/1000);
 		})
-		.addHook('preHandler', async(req, reply) => {
+		.addHook('preHandler', async(req, res) => {
 			req.session = { source:'unkown', is_login:false };
 			
 
 			let auth_source:LoginSession['source'], raw_token:string;
 			const auth = (req.headers['authorization']||'').trim();
+			console.log('auth', auth, req.headers);
+			
 			if ( auth ) {
 				if ( auth.substring(0, 7) !== "Bearer " ) return;
 				
