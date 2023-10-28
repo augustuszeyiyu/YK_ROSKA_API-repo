@@ -157,7 +157,6 @@ Promise.chain(async()=>{
 				raw_token = (req.cookies[Config.cookie.cookie_session_id]||'').trim();
 			}
 
-			console.log({raw_token});
 			
 
 			
