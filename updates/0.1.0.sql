@@ -255,7 +255,7 @@ EXECUTE FUNCTION set_roska_groups_bit_end_time();
 -- roska_members
 DROP TABLE IF EXISTS roska_members CASCADE;
 CREATE TABLE IF NOT EXISTS roska_members (
-    mid 					    VARCHAR(20)		    NOT NULL PRIMARY KEY,
+    mid 					    VARCHAR(16)		    NOT NULL PRIMARY KEY,
     gid 					    VARCHAR(3)		    NOT NULL,
     sid                         VARCHAR(13)			NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',

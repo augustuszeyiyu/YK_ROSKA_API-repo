@@ -69,7 +69,7 @@ export = async function(fastify:FastifyInstance) {
 			summary: '取得驗證碼',
 			params:{},
 		};
-		fastify.get('/login', {schema}, async (req, res) => {
+		fastify.get<{Reply:APIResponse<{image:string}>}>('/login', {schema}, async (req, res) => {
 			// Generate a new CAPTCHA	
 			const options = {
 				size: 6,
