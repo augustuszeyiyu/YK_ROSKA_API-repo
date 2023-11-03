@@ -112,19 +112,19 @@ export = async function(fastify: FastifyInstance) {
 				if (address === undefined)	{ return res.status(400).send({msg:'性別必填'}); }
 				else						{ payload.address = address; }
 
-				if (line_id !== undefined)	{ payload.line_id = line_id; }
+				if (line_id !== '' && line_id !== undefined)	{ payload.line_id = line_id; }
 
 				if (birth_date === undefined)							{ return res.status(400).send({msg:'生日必填'}); }
 				else
 				if (birth_date_pattern.test(birth_date) === false) 		{ return res.status(400).send({msg:'生日日期格式錯誤'});}
 				else													{ payload.birth_date = birth_date; }
 
-				if (contact_home_number !== undefined && Main_Island_Home_Number_Pattern.test(contact_home_number) === false) {
+				if (contact_home_number !== '' && contact_home_number !== undefined && Main_Island_Home_Number_Pattern.test(contact_home_number) === false) {
 					return res.status(400).send({msg:'連絡電話-市話格式錯誤'});
 				}
 				else 													{ payload.contact_home_number = contact_home_number.replace(/(\d{2})(\d{3,4})(\d{3})/, '$1-$2-$3'); }
 
-				if (contact_mobile_number === undefined)				{ return res.status(400).send({msg:'生日必填'}); }
+				if (contact_mobile_number === undefined)				{ return res.status(400).send({msg:'連絡電話必填'}); }
 				if (Mobile_Number_Pattern.test(contact_mobile_number)) 	{ return res.status(400).send({msg:'連絡電話-手機格式錯誤'}); }
 				else 													{ payload.contact_mobile_number = contact_mobile_number.replace(/(\d{4})(\d{3})(\d{3})/, '$1-$2-$3'); }
 
