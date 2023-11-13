@@ -271,7 +271,12 @@ Promise.chain(async()=>{
 
 	console.log("Starting server...");
 	fastify_inst.listen({port:Config.serve_at.port, host:Config.serve_at.host}, (err, address) => {
-		console.error(err, address);
+		if (err) {
+			fastify_inst.log.error(err);
+		}
+		else {
+			fastify_inst.log.info(address);
+		}
 	});
 	
 	console.log(`Server listening at http://${Config.serve_at.host}:${Config.serve_at.port}`);
