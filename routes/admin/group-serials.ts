@@ -26,7 +26,7 @@ export = async function(fastify: FastifyInstance) {
                     frequency:          {type: "string"},
                     bit_start_time:     {type: "string"},
                 },
-                required: ['basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'g_frequency', 'bit_start_time'], 
+                required: ['basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'frequency', 'bit_start_time'], 
                 examples:[
                     {
                         member_count:25,
@@ -52,7 +52,7 @@ export = async function(fastify: FastifyInstance) {
                 frequency:          {type: "string", pattern: GenWhiteListPattern([...Object.keys(GroupFrequency)]).source },
                 bit_start_time:     {type: "string"},
             },
-            required: ['basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'g_frequency', 'bit_start_time']
+            required: ['basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'frequency', 'bit_start_time']
         };
         const PayloadValidator = $.ajv.compile(schema_body);
 		fastify.post<{Body:RoskaSerialsRequiredInfo}>('/group-serial', {schema}, async (req, res)=>{

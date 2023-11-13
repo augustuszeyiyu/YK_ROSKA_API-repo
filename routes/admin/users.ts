@@ -41,14 +41,6 @@ export = async function(fastify:FastifyInstance) {
                 });
             }
 
-			// NOTE: user admin-level = 2
-			// if (req.session.admin_level! <= 1) {
-            //     return res.status(400).send({
-            //         scope:req.routerPath,
-            //         code:ErrorCode.UNAUTHORIZED,
-            //         msg: "You're not authorized to access this resource!"
-            //     });
-            // }
 
 
 			const {filter_text, order, p, ps} = req.query;

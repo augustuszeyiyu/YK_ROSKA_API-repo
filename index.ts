@@ -23,6 +23,7 @@ import BWT from '/lib/web-token.js';
 import payload = require('/package.json');
 import Config from '/config.default.js';
 import { log } from 'console';
+import { BaseError } from './lib/error.js';
 
 
 
@@ -141,13 +142,17 @@ Promise.chain(async()=>{
 		.addHook('preHandler', async(req, res) => {
 			req.session = { source:'unkown', is_login:false };
 			
+			console.log(req.routerPath);
+			const whiteList = ['api/register', '/api/auth/login', '/api/auth/logout', '/api/version'];
+			if (whiteList.includes(req.routerPath) === true)  return;
+
 
 			let auth_source:LoginSession['source'], raw_token:string;
 			const auth = (req.headers['authorization']||'').trim();
 			console.log('auth', auth, req.headers);
 			
 			if ( auth ) {
-				if ( auth.substring(0, 7) !== "Bearer " ) return;
+				if ( auth.substring(0, 7) !== "Bearer " ) return res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
 				
 				auth_source = 'auth';
 				raw_token = auth.substring(7).trim();
@@ -162,10 +167,10 @@ Promise.chain(async()=>{
 
 			
 			const parsed_token = BWT.ParseBWT<RoskaSessToken>(raw_token, Config.secret.session);
-			if ( !parsed_token ) return;
+			if ( !parsed_token ) return res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
 
 			let is_valid_token = parsed_token.exp >= Date.unix();
-			if ( !is_valid_token ) return;
+			if ( !is_valid_token ) return res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
 
 
 			// @ts-ignore
@@ -174,7 +179,7 @@ Promise.chain(async()=>{
 				SELECT id, role FROM login_sessions WHERE id = '${parsed_token.tid}' AND uid = '${parsed_token.uid}' AND revoked = false;
 			`);
 
-			if ( !user_info || !session_info ) return;
+			if ( !user_info || !session_info ) return res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
 
 			
 			
