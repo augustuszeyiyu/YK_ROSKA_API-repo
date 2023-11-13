@@ -184,13 +184,13 @@ export = async function(fastify: FastifyInstance) {
 
             const {order, p, ps} = req.query;
 			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
-			const _PageSize = !ps? 30 : (ps && parseInt(ps)<30? 30: (ps && parseInt(ps) > 150 ? 150 : parseInt(ps)));
+			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
   			const _PageOffset = ((_PageNumber-1) * _PageSize);
 
             
 
 			let sql_count = `SELECT COUNT(*) FROM roska_serials;`;
-			let sql = `SELECT * FROM roska_serials ORDER BY sid ${order} `;
+			let sql = `SELECT * FROM roska_serials ORDER BY sid ${order.toUpperCase()} `;
 			const val:any[] = [];
 
 
