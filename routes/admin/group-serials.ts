@@ -12,35 +12,6 @@ import { GenWhiteListPattern, INT_POSSITIVE_STR_FORMAT } from "/data-type/common
 export = async function(fastify: FastifyInstance) {
     /** 產會組序號 sid **/
     {
-        const schema = {
-			description: '產會組序號，比如: YA0034，和一組新的會組編號',
-			summary: '產會組序號，比如: YA0034，和一組新的會組編號',
-            body: {
-                type: 'object',
-                properties: {
-                    member_count:       {type: "number"},
-                    basic_unit_amount:  {type: "number"},
-                    min_bid_amount:     {type: "number"},
-                    max_bid_amount:     {type: "number"},
-                    bid_unit_spacing:   {type: "number"},
-                    frequency:          {type: "string"},
-                    bit_start_time:     {type: "string"},
-                },
-                required: ['basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'frequency', 'bit_start_time'], 
-                examples:[
-                    {
-                        member_count:25,
-                        basic_unit_amount: 5000,
-                        min_bid_amount: 200,
-                        max_bid_amount: 1000,
-                        bid_unit_spacing: 200,
-                        frequency: 'monthly'
-                    }
-                ]
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
         const schema_body = {
             type: 'object',
             properties: {
@@ -49,14 +20,40 @@ export = async function(fastify: FastifyInstance) {
                 min_bid_amount:     {type: "number"},
                 max_bid_amount:     {type: "number"},
                 bid_unit_spacing:   {type: "number"},
-                frequency:          {type: "string", pattern: GenWhiteListPattern([...Object.keys(GroupFrequency)]).source },
                 bit_start_time:     {type: "string"},
+                frequency:          {type: "string", pattern: GenWhiteListPattern([...Object.values(GroupFrequency)]).source },
             },
-            required: ['basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'frequency', 'bit_start_time']
+            required: ['member_count', 'basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'bit_start_time', 'frequency']
         };
+
+        const schema = {
+			description: '產會組序號，比如: YA0034，和一組新的會組編號',
+			summary: '產會組序號，比如: YA0034，和一組新的會組編號',
+            body: {
+                type: 'object',
+                properties: schema_body.properties,
+                required: schema_body.required, 
+                examples:[
+                    {
+                        member_count:25,
+                        basic_unit_amount: 5000,
+                        min_bid_amount: 200,
+                        max_bid_amount: 1000,
+                        bid_unit_spacing: 200,
+                        bit_start_time: '2023-11-15',
+                        frequency: 'monthly'
+                    }
+                ]
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+       
         const PayloadValidator = $.ajv.compile(schema_body);
 		fastify.post<{Body:RoskaSerialsRequiredInfo}>('/group-serial', {schema}, async (req, res)=>{
-            if ( !PayloadValidator(req.query) ) {
+            console.log(req.body);
+            
+            if ( !PayloadValidator(req.body) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
@@ -66,27 +63,55 @@ export = async function(fastify: FastifyInstance) {
             }
 
             const {uid, role}= req.session.token!;
+            const {member_count, basic_unit_amount, min_bid_amount, max_bid_amount, bid_unit_spacing, bit_start_time, frequency} = req.body;
 
-            const {rows:[row]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`SELECT sid FROM roska_serials ORDER BY sid DESC;`);
+
+            let _s= '', sid_prefix = '', sid_date = '';
+            const {rows:[row_sid]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
+                SELECT sid FROM roska_serials
+                ORDER BY sid DESC;`);
+
+
+            console.log({row_sid});
+                
+            if (row_sid === undefined)  _s = 'YA0000-';
+            else                        _s = row_sid.sid;
+            console.log({_s});
+           
             
             // NOTE: YA0001-231001,  find YA0001 
-            const _v = row.sid.split('-');
-            const _sid = _v[0];
-            const _date = _v[1];
-            let sid = generateNextSid(_sid);
-            if (sid === undefined)  sid = generateNextSid('YA0000');
+            const _v = _s.split('-');
+            sid_prefix = _v[0];
+            sid_date = _v[1];
+            let sid = generateNextSid(sid_prefix);
+            console.log({sid});
             
             
             // NOTE: get year and month
-            const today = new Date();
-            const year = `${today.getFullYear() % 100}`.padStart(2, '0'); // Ensure 2 digits for year
-            const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Ensure 2 digits for month
+            const inputDate = new Date('2023-11-15');
+            const formattedDate = inputDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }).replace(/\//g, '');
+            console.log({formattedDate}); // Output: 2311
 
-            const did = _date.indexOf(`${year}${month}`) === 0? (Number(_date)+1).toString() : `${year}${month}01`; 
-            sid = `${sid}-${did}`;
+            const {rows:[row_bit_time]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
+                SELECT sid FROM roska_serials
+                WHERE bit_start_time::date = $1
+                ORDER BY sid DESC;`, [bit_start_time]);
+            console.log({row_bit_time});
             
+            
+            if (row_bit_time === undefined) {
+                sid = `${sid}-${formattedDate}01`;
+            }
+            else {
+                const _r = row_bit_time.sid.split('-');
+                const bit_date = `${Number(_r[1]) + 1}`.padStart(6, '0');
 
-            const {member_count, basic_unit_amount, min_bid_amount, max_bid_amount, bid_unit_spacing, frequency} = req.body;
+                sid = `${sid}-${bit_date}`;
+            }
+            
+            console.log({sid});
+            
+            
             const payload:Partial<RoskaSerials> = {sid, uid};
 
             {
@@ -98,9 +123,11 @@ export = async function(fastify: FastifyInstance) {
                 if (min_bid_amount !== undefined)       { payload.min_bid_amount = min_bid_amount; }
                 if (max_bid_amount !== undefined)       { payload.max_bid_amount = max_bid_amount; }
                 if (bid_unit_spacing !== undefined)     { payload.bid_unit_spacing = bid_unit_spacing; }
-                if (frequency !== undefined && Object.keys(GroupFrequency).includes(frequency) === true)            
-                                                        { payload.frequency = frequency; }
+                if (bit_start_time !== undefined)       { payload.bit_start_time = bit_start_time; }
+                if (frequency !== undefined)            { payload.frequency = frequency; }
             }
+            
+            console.log(payload);
             
             const sql = PGDelegate.format(`
                 INSERT INTO roska_serials(${Object.keys(payload).join(', ')}) 

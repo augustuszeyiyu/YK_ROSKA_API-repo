@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS roska_serials (
     min_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
     max_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
     bid_unit_spacing            INTEGER             NOT NULL DEFAULT 0,
-    frequency                   VARCHAR(6)          NOT NULL DEFAULT 'monthly',
+    frequency                   VARCHAR(15)         NOT NULL DEFAULT 'monthly',
     bit_start_time              TIMESTAMPTZ         NOT NULL,
     bit_end_time                TIMESTAMPTZ         NOT NULL,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
@@ -193,10 +193,10 @@ DECLARE
 BEGIN
     IF NEW.frequency = 'monthly' THEN
         duration := NEW.member_count; -- Use the member_count as the duration
-        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' months'::INTERVAL) - INTERVAL '1 second';
+        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' months'::TEXT)::INTERVAL - INTERVAL '1 second';
     ELSIF NEW.frequency = 'biweekly' THEN
         duration := NEW.member_count * 2; -- Biweekly, so multiply by 2
-        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' weeks'::INTERVAL) - INTERVAL '1 second';
+        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' weeks'::TEXT)::INTERVAL - INTERVAL '1 second';
     END IF;  
     
     RETURN NEW;

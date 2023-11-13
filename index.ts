@@ -142,14 +142,14 @@ Promise.chain(async()=>{
 		.addHook('preHandler', async(req, res) => {
 			req.session = { source:'unkown', is_login:false };
 			
-			console.log(req.routerPath);
+			// console.log(req.routerPath);
 			const whiteList = ['api/register', '/api/auth/login', '/api/auth/logout', '/api/version'];
 			if (whiteList.includes(req.routerPath) === true)  return;
 
 
 			let auth_source:LoginSession['source'], raw_token:string;
 			const auth = (req.headers['authorization']||'').trim();
-			console.log('auth', auth, req.headers);
+			// console.log('auth', auth, req.headers);
 			
 			if ( auth ) {
 				if ( auth.substring(0, 7) !== "Bearer " ) return res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
@@ -162,7 +162,7 @@ Promise.chain(async()=>{
 				raw_token = (req.cookies[Config.cookie.cookie_session_id]||'').trim();
 			}
 
-			console.log({raw_token});
+			// console.log({raw_token});
 			
 
 			
