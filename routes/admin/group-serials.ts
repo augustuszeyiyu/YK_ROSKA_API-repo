@@ -135,7 +135,7 @@ export = async function(fastify: FastifyInstance) {
         const schema_query = {
             type: 'object',
             properties:{
-                order:  { type: 'string', pattern: /^ASC$|^DESC$/ },
+                order:  { type: 'string' },
                 p:      { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
                 ps:     { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
