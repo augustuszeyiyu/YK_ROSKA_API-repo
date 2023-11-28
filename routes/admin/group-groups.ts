@@ -141,7 +141,7 @@ export = async function(fastify: FastifyInstance) {
     }
 	
     
-    /** 在已知會組序號前提下，新增會組編號 **/
+    /** 產每期會組編號 **/
 	{
         const schema_params = {
             type: 'object',
@@ -150,8 +150,8 @@ export = async function(fastify: FastifyInstance) {
             } 
         };
         const schema = {
-			description: '在已知會組序號前提下，新增會組編號',
-			summary: '在已知會組序號前提下，新增會組編號',
+			description: '產每期會組編號',
+			summary: '產每期會組編號',
             params: schema_params,
             security: [{ bearerAuth: [] }],
 		};
@@ -194,6 +194,7 @@ export = async function(fastify: FastifyInstance) {
                     bit_start_time = calculateBiWeeklyBitStartTime(startTime, index)
                 }
 
+                console.log(bit_start_time);
                 
                 // Add the member information to the list
                 const payload:Partial<RoskaGroups> = { gid, sid, bit_start_time: new Date(bit_start_time).toISOString() }
@@ -288,23 +289,29 @@ export = async function(fastify: FastifyInstance) {
       
     function calculateMonthlyBitStartTime(bit_start_time:Date, index:number):Date {
         // Calculate Start Time with month and year rollover and weekend avoidance
-        const newMonth = bit_start_time.getMonth() + index - 1;
+        const newMonth = bit_start_time.getMonth() + index;
         const yearOffset = Math.floor(newMonth / 12); // Calculate how many years to add
         const monthInYear = newMonth % 12; // Calculate the month within the year
-        bit_start_time.setFullYear(bit_start_time.getFullYear() + yearOffset, monthInYear, 10);
-      
+        console.log({newMonth, yearOffset, monthInYear});
+        
+
+        const newYear = bit_start_time.getFullYear() + yearOffset;
+        let newDate = new Date(newYear, monthInYear, 10);
+
+        console.log({newYear, newDate});
+
         // Check if the calculated date is a weekend
-        if (isWeekend(bit_start_time) === true) {
-            if (bit_start_time.getDay() === 0) { // If it's Sunday
+        if (isWeekend(newDate) === true) {
+            if (newDate.getDay() === 0) { // If it's Sunday
                 // Subtract 2 days to schedule it on the previous Friday.
-                bit_start_time.setDate(bit_start_time.getDate() - 2);
-            } else if (bit_start_time.getDay() === 6) { // If it's Saturday
+                newDate.setDate(newDate.getDate() - 2);
+            } else if (newDate.getDay() === 6) { // If it's Saturday
                 // Subtract 1 day to schedule it on the previous Friday.
-                bit_start_time.setDate(bit_start_time.getDate() - 1);
+                newDate.setDate(newDate.getDate() - 1);
             }
         }
       
-        return bit_start_time; // Return the adjusted bit_start_time
+        return newDate; // Return the adjusted bit_start_time
     }
 
     function calculateBiWeeklyBitStartTime(bit_start_time:Date, index:number) {
