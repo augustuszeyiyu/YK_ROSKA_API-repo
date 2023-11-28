@@ -102,15 +102,19 @@ export = async function(fastify: FastifyInstance) {
             const {sid} = req.params;
 
 
-            const {rows:roska_groups} = await Postgres.query<RoskaGroups>(`SELECT * FROM roska_groups WHERE sid=$1;`, [sid]);
-            if (roska_groups === undefined) {
+            const {rows: [roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
+            if (roska_serial === undefined) {
                 return res.errorHandler(GroupError.SID_NOT_FOUND);
             }
 
 
-            const {rows:all_member_info} = await Postgres.query(`SELECT count(mid) FROM roska_members WHERE sid=$1 AND gid=$2 GROUP BY mid;`, [sid, roska_groups[0].gid]);
-            
-            const next = `${all_member_info.length+1}`.padStart(2, '0');
+            const {rows: [member_count]} = await Postgres.query<{count:num_str}>(`SELECT count(mid) FROM roska_members WHERE sid=$1 GROUP BY mid;`, [sid]);
+            const total_members = Number(member_count.count);
+            if (roska_serial.cycles === total_members) {
+                return res.errorHandler(GroupError.GROUP_SERIAL_IS_FULL);
+            }
+
+            const next = `${total_members + 1}`.padStart(2, '0');
             const mid = `${sid}-${next}`;
            
             const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});

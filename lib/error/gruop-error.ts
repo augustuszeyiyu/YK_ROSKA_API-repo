@@ -16,4 +16,8 @@ export class GroupError {
 		status:400, code:'api#gruop#invalid-bid-amount',
 		msg:'下注金額錯誤.'
 	};
+	public static GROUP_SERIAL_IS_FULL:HuntErrorItem = {
+		status:400, code:'api#gruop#group-serial-is-full',
+		msg:'此會組已額滿'
+	};
 };
