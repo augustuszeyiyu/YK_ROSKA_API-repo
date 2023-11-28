@@ -250,14 +250,9 @@ export = async function(fastify:FastifyInstance) {
                 await Postgres.query(sql);				
             }
         
-            res.setCookie(Config.cookie.cookie_session_id, '', {
-                path:'/',
-                httpOnly:true,
-                expires:new Date(),
-                domain: Config.cookie.domain || undefined
-            })
-            .status(200)
-            .send({});
+            res.clearCookie(Config.cookie.cookie_session_id)
+			.status(200)
+			.send({});
         });
     }
 };
