@@ -34,6 +34,7 @@ export = async function(fastify:FastifyInstance) {
 			access_token: 	string;
 			login_time: 	number;
 			expired_time: 	number;
+			is_login:		boolean;
 		};
 		fastify.get('/session', {schema}, async(req, res)=>{
 			console.log(req.session.token);
@@ -43,20 +44,13 @@ export = async function(fastify:FastifyInstance) {
 
 			const token = req.session.token!;
 			const raw_token:string = req.session.raw_token!;
-			
-			let count:number=0;
-			const Pg = await Postgres.zone('login_sessions', async(Pg)=>{
-				count = await Pg.CountDocument({id: token.tid});
-			});
-
-			if ( count === 0 ) {
-				return res.errorHandler( BaseError.UNAUTHORIZED_ACCESS);
-			}		
+				
 
 			const result:ResponseType = {
 				access_token: 	raw_token,
 				login_time: 	token.iat,
 				expired_time: 	token.exp,
+				is_login:	 	req.session.is_login,
 			};
 
 			res.status(200).send(result);
@@ -243,16 +237,17 @@ export = async function(fastify:FastifyInstance) {
             params: {},
 			security: [{ bearerAuth: [] }],
         };
-        fastify.get('/logout', {schema}, async(req, res)=>{			
-            if (req.session.is_login === true) {
+        fastify.get('/logout', {schema}, async(req, res)=>{
+            if (req.session.is_login === true) {				
                 const {tid} = req.session.token!;
                 const sql = PGDelegate.format(`UPDATE login_sessions SET revoked={revoked}, revoked_time=NOW() WHERE id={id};`, {id:tid, revoked:true});
+				console.log(sql);
+				
                 await Postgres.query(sql);				
             }
-        
-            res.clearCookie(Config.cookie.cookie_session_id, {
-				path: '/',
-			}).status(200).send({});
+			
+			
+            res.clearCookie(Config.cookie.cookie_session_id).status(200).send({});
         });
     }
 };
