@@ -218,7 +218,7 @@ EXECUTE FUNCTION set_roska_serials_bit_end_time();
 -- roska_groups
 DROP TABLE IF EXISTS roska_groups CASCADE;
 CREATE TABLE IF NOT EXISTS roska_groups (
-	gid 					    VARCHAR(3)		    NOT NULL PRIMARY KEY,
+	gid 					    VARCHAR(17)		    NOT NULL PRIMARY KEY,
     sid                         VARCHAR(13)		    NOT NULL,
     bit_start_time              TIMESTAMPTZ         NOT NULL,
     bit_end_time                TIMESTAMPTZ         NOT NULL,
