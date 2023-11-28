@@ -255,8 +255,8 @@ EXECUTE FUNCTION set_roska_groups_bit_end_time();
 -- roska_members
 DROP TABLE IF EXISTS roska_members CASCADE;
 CREATE TABLE IF NOT EXISTS roska_members (
-    mid 					    VARCHAR(16)		    NOT NULL PRIMARY KEY,
-    gid 					    VARCHAR(3)		    NOT NULL,
+    mid 					    VARCHAR(20)		    NOT NULL,
+    gid 					    VARCHAR(17)		    NOT NULL,
     sid                         VARCHAR(13)			NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
     bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
@@ -266,10 +266,10 @@ CREATE TABLE IF NOT EXISTS roska_members (
     transition                  SMALLINT            NOT NULL DEFAULT 0,
     installment_amount          DECIMAL             NOT NULL DEFAULT 0,
     installment_deadline        TIMESTAMPTZ,
-    joing_time                  TIMESTAMPTZ,
     assignment_path             LTREE               NOT NULL DEFAULT '',
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (mid, gid, sid, uid),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid),
     FOREIGN KEY (gid) REFERENCES roska_groups(gid),
     FOREIGN KEY (uid) REFERENCES users(uid)

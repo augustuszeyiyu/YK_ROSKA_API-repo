@@ -4,6 +4,7 @@ import { RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { BaseError, LoginError, UserError } from '/lib/error';
+import { GroupError } from "/lib/error/gruop-error";
 
 
 export = async function(fastify: FastifyInstance) {
@@ -17,17 +18,16 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         fastify.get('/group/serial/new-list', {schema}, async (req, res)=>{
-            const {uid} = req.session.token!;
-            if (uid === undefined) {
+            if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
 
             
-            const {rows:[row]} = await Postgres.query<RoskaSerials>(`
+            const {rows} = await Postgres.query<RoskaSerials>(`
                 SELECT * FROM roska_serials 
                 WHERE bit_start_time >= NOW()
                 ORDER BY sid ASC`);
-            return res.status(200).send(row);
+            return res.status(200).send(rows);
         });
     }
     /** 進行中的會組 **/
@@ -40,68 +40,45 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         fastify.get('/group/serial/on-list', {schema}, async (req, res)=>{
-            const {uid} = req.session.token!;
-            if (uid === undefined) {
+            if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
-
             
-            const {rows:[row]} = await Postgres.query<RoskaSerials>(`
+            const {rows} = await Postgres.query<RoskaSerials>(`
                 SELECT s.*, g.bit_start_time as g_bit_start_time, g.bit_end_time as g_bit_end_time
                 FROM roska_groups g
-                LEFT JOING roska_serials s ON s.sid = g.sid
+                LEFT JOIN roska_serials s ON s.sid = g.sid
                 WHERE NOW() <= g.bit_start_time AND NOW() >= g.bit_end_time
                 ORDER BY sid ASC`);
-            return res.status(200).send(row);
+
+            return res.status(200).send(rows);
         });
     }
 
-    /** 新成立會組列表 **/
+    /** 搜尋該會組會期 **/
     {
         const schema = {
-			description: '新成立會組列表',
-			summary: '新成立會組列表',
-            params: {},
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get('/group/serial/list', {schema}, async (req, res)=>{
-            const {uid} = req.session.token!;
-            if (uid === undefined) {
-                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-            }
-
-            
-            const {rows:[row]} = await Postgres.query<RoskaSerials>(`
-                SELECT * FROM roska_serials 
-                WHERE NOW() <= bit_start_time
-                ORDER BY sid ASC`);
-            return res.status(200).send(row);
-        });
-    }
-
-    /** 搜尋組團 **/
-    {
-        const schema = {
-			description: '搜尋組團',
-			summary: '搜尋組團',
+			description: '搜尋該會組會期',
+			summary: '搜尋該會組會期',
             params: {
                 type: 'object',
                 properties:{
-                    gid: {type: 'string'}
+                    sid: {type: 'string'}
                 }
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get('/group/group/:gid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
             const {uid} = req.session.token!;
             if (uid === undefined) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
 
+            const {sid} = req.params;
+            const {rows} = await Postgres.query(`SELECT * FROM roska_groups WHERE sid=$1 ORDER BY gid ASC`, [sid]);
 
-            const {rows:[row]} = await Postgres.query(`SELECT * FROM roska_goups ORDER BY gid DESC`);
+            return res.status(200).send(rows);
         });
     }
 
@@ -114,21 +91,45 @@ export = async function(fastify: FastifyInstance) {
                 description: '加入改團，新增會員入團',
                 type: 'object',
 				properties: {
-                    gid: { type: 'string' }
+                    sid: { type: 'string' }
                 },
             },
+            security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Params:{gid:RoskaGroups['gid']}}>('/group/member/:gid', {schema}, async (req, res)=>{
+        fastify.post<{Params:{sid:RoskaSerials['sid']}}>('/group/member/:sid', {schema}, async (req, res)=>{
             const {uid}:{uid:User['uid']} = req.session.token!;
 
-            const {gid} = req.params;
-            
-            const {rows:[row]} = await Postgres.query(`SELECT mid FROM roska_members WHERE gid=$1 AND join_time=0 ORDER BY mid ASC LIMIT 1;`, [gid]);
-            await Postgres.query<RoskaMembers>(`UPDATE roska_members SET uid=$1, joing_time=$2 WHERE mid=$3 AND gid=$4 RETURNING *;`, [uid, Date.unix(), gid, row.mid]);
+            const {sid} = req.params;
+
+
+            const {rows:roska_groups} = await Postgres.query<RoskaGroups>(`SELECT * FROM roska_groups WHERE sid=$1;`, [sid]);
+            if (roska_groups === undefined) {
+                return res.errorHandler(GroupError.SID_NOT_FOUND);
+            }
+
+
+            const {rows:all_member_info} = await Postgres.query(`SELECT count(mid) FROM roska_members WHERE sid=$1 AND gid=$2 GROUP BY mid;`, [sid, roska_groups[0].gid]);
+
+            const {rows:member_info} = await Postgres.query(`SELECT mid FROM roska_members WHERE sid=$1 AND uid=$2 ORDER BY mid ASC;`, [sid, uid]);
+            if (member_info.length === roska_groups.length)  return res.status(200).send({});
 
             
-			res.status(200).send({gid});
+            const next = `${all_member_info.length+1}`.padStart(2, '0');
+            const mid = `${sid}-${next}`;
+            const member_list:string[] = [];
+            for (const {gid, sid} of roska_groups) {
+                const data = PGDelegate.format(`INSERT INTO roska_members (sid, gid, mid, uid) VALUES({sid}, {gid}, {mid}, {uid});`, {sid, gid, mid, uid});
+                member_list.push(data);
+            }
+
+            
+            console.log(member_list);
+            await Postgres.query(member_list.join('\n'));
+
+          
+            
+			res.status(200).send({});
 		});
     }
 
