@@ -157,8 +157,8 @@ Promise.chain(async()=>{
 		.addHook('preHandler', async(req, res) => {
 			req.session = { source:'unkown', is_login:false };
 			
-			// console.log(req.routerPath);
-			const whiteList = ['api/register', '/api/auth/login', '/api/auth/logout', '/api/version'];
+			console.log(req.routerPath);
+			const whiteList = ['/api/register', '/api/auth/login', '/api/auth/logout', '/api/version'];
 			if (whiteList.includes(req.routerPath) === true)  return;
 
 
