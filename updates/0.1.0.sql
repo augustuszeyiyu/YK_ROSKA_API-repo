@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS roska_bids (
     mid 					    VARCHAR(20)		    NOT NULL,
     gid 					    VARCHAR(17)		    NOT NULL,
     sid                         VARCHAR(13)			NOT NULL,
-    uid                         VARCHAR(32)         NOT NULL DEFAULT '',
+    uid                         VARCHAR(32)         NOT NULL,
     bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win                         BOOLEAN             NOT NULL DEFAULT false,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
@@ -288,7 +288,7 @@ CREATE TABLE IF NOT EXISTS roska_members (
     mid 					    VARCHAR(20)		    NOT NULL,
     sid                         VARCHAR(13)			NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
-    win_gid                     VARCHAR(17)		    NOT NULL DEFAULT '',
+    gid                         VARCHAR(17)		    NOT NULL DEFAULT '',
     win_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win_time                    TIMESTAMPTZ,
     transition                  SMALLINT            NOT NULL DEFAULT 0,
@@ -296,9 +296,8 @@ CREATE TABLE IF NOT EXISTS roska_members (
     installment_deadline        TIMESTAMPTZ,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (mid, gid, sid, uid),
+    PRIMARY KEY (mid, sid, uid),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid),
-    FOREIGN KEY (gid) REFERENCES roska_groups(gid),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
 --不轉讓 有得標 (transition=0)
