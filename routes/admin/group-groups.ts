@@ -314,7 +314,8 @@ export = async function(fastify: FastifyInstance) {
             const {gid} = req.params;
             const {rows:roska_bids} = await Postgres.query<RoskaBids>(`SELECT * FROM roska_bids WHERE gid=$1 ORDER BY bid_amount DESC;`, [gid]);
 
-            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [roska_bids[0].sid]);
+            const sid = roska_bids[0].sid;
+            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
 
             console.log(roska_serial.bid_unit_spacing, roska_serial.max_bid_amount);
             
@@ -367,6 +368,41 @@ export = async function(fastify: FastifyInstance) {
                 await Postgres.query(sql);
             }
 
+            // NOTE: updaet roska_members
+            {
+                const {rows:[live_die]} = await Postgres.query<{live:num_str, die:num_str}>(`
+                    SELECT 
+                        COUNT(CASE WHEN gid = '' THEN 1 END) AS live,
+                        COUNT(CASE WHEN gid <> '' THEN 1 END) AS die
+                    FROM roska_members
+                    WHERE sid = $1;`, [sid]);
+
+                const live_member_count = Number(live_die.live) - 1;
+                const die_member_count  = Number(live_die.die)  + 1;
+                const basic_unit_amount = Number(roska_serial.basic_unit_amount);
+                const bit_amount        = Number(winner_candidate.bid_amount);
+
+                const update_member = {
+                    mid: winner_candidate.mid,
+                    sid: winner_candidate.sid,
+                    uid: winner_candidate.uid,
+                    gid: winner_candidate.gid,
+                    win_amount: (live_member_count * (basic_unit_amount - bit_amount)) + (die_member_count * basic_unit_amount)
+                }
+
+                const sql = PGDelegate.format(`
+                    UPDATE roska_members
+                        SET gid = {gid},
+                            uid = {uid},
+                            win_amount = {win_amount},
+                            win_time = NOW()
+                        WHERE mid = {mid},
+                        AND uid = {uid}
+                        AND sid = {sid};`, 
+                    update_member);
+
+                await Postgres.query(sql);
+            }
 
             
             return res.status(200).send(winner_candidate);
