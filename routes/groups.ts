@@ -85,8 +85,8 @@ export = async function(fastify: FastifyInstance) {
 
     {
         const schema = {
-			description: '新增會員入會',
-			summary: '新增會員入會',
+			description: '加入會組',
+			summary: '加入會組',
             params: {
                 type: 'object',
 				properties: {
@@ -109,22 +109,13 @@ export = async function(fastify: FastifyInstance) {
 
 
             const {rows:all_member_info} = await Postgres.query(`SELECT count(mid) FROM roska_members WHERE sid=$1 AND gid=$2 GROUP BY mid;`, [sid, roska_groups[0].gid]);
-
-            const {rows:member_info} = await Postgres.query(`SELECT mid FROM roska_members WHERE sid=$1 AND uid=$2 ORDER BY mid ASC;`, [sid, uid]);
-            if (member_info.length === roska_groups.length)  return res.status(200).send({});
-
             
             const next = `${all_member_info.length+1}`.padStart(2, '0');
             const mid = `${sid}-${next}`;
-            const member_list:string[] = [];
-            for (const {gid, sid} of roska_groups) {
-                const data = PGDelegate.format(`INSERT INTO roska_members (sid, gid, mid, uid) VALUES({sid}, {gid}, {mid}, {uid});`, {sid, gid, mid, uid});
-                member_list.push(data);
-            }
-
-            
-            console.log(member_list);
-            await Postgres.query(member_list.join('\n'));
+           
+            const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
+    
+            await Postgres.query(sql);
 
           
             
@@ -164,8 +155,8 @@ export = async function(fastify: FastifyInstance) {
 
     {
         const schema = {
-			description: '下注',
-			summary: '下注',
+			description: '下標',
+			summary: '下標',
             body: {
                 type: 'object',
 				properties: {
@@ -199,24 +190,23 @@ export = async function(fastify: FastifyInstance) {
                 return res.errorHandler(GroupError.INVALID_bid_amount);
             }
 
+            const {rows:[roska_member]} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE uid=$1 AND sid=$2;`, [uid, roska_group.sid]);
 
-            const {rowCount} = await Postgres.query(`
-                UPDATE roska_members m
-                SET bid_amount = $1
-                FROM roska_groups g
-                WHERE m.gid = g.gid
-                AND m.sid = g.sid
-                AND m.uid = $2
-                AND m.gid = $3
-                AND g.bid_start_time >= NOW() 
-                AND g.bid_end_time <= NOW() 
-                RETURNING *;`,[bid_amount, uid, gid]);
 
-            if (rowCount === 0) {
-                return res.errorHandler(GroupError.INVALID_bid_start_time, [roska_group.bid_start_time, roska_group.bid_end_time]);
-            }
+            const sql = PGDelegate.format(`
+                INSERT INTO roska_bids(mid, gid, sid, uid, bid_amount) 
+                VALUES ({mid}, {gid}, {sid}, {uid}, {bid_amount})
+                RETURNING *;`, {
+                    mid: roska_member.mid,
+                    gid: roska_group.gid,
+                    sid: roska_member.sid,
+                    uid: roska_member.uid,
+                    bid_amount
+                });
 
-            return res.status(200).send({});
+            const {rows:[row]} = await Postgres.query(sql);
+
+            return res.status(200).send(row);
         });   
     }
 

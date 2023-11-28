@@ -258,7 +258,7 @@ EXECUTE FUNCTION set_roska_groups_bid_end_time();
 
 
 
--- roska_members
+-- roska_bids
 DROP TABLE IF EXISTS roska_bids CASCADE;
 CREATE TABLE IF NOT EXISTS roska_bids (
     mid 					    VARCHAR(20)		    NOT NULL,
@@ -275,6 +275,12 @@ CREATE TABLE IF NOT EXISTS roska_bids (
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
 
+CREATE TRIGGER trigger_roska_bids_update_time
+BEFORE UPDATE ON roska_bids
+FOR EACH ROW
+EXECUTE FUNCTION update_update_time();
+
+
 -- roska_members
 DROP TABLE IF EXISTS roska_members CASCADE;
 CREATE TABLE IF NOT EXISTS roska_members (
@@ -285,6 +291,8 @@ CREATE TABLE IF NOT EXISTS roska_members (
     win_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win_time                    TIMESTAMPTZ,
     transition                  SMALLINT            NOT NULL DEFAULT 0,
+    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
+    installment_deadline        TIMESTAMPTZ,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     PRIMARY KEY (mid, gid, sid, uid),

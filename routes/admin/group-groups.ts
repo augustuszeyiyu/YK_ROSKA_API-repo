@@ -280,6 +280,7 @@ export = async function(fastify: FastifyInstance) {
 
             const {sid} = req.params;
 
+            
             const {rows} = await Postgres.query(
                 `SELECT m.mid, m.sid, m.uid, u.contact_mobile_number, u.address
                 FROM roska_members m 
