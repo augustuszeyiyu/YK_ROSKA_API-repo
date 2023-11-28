@@ -3,6 +3,10 @@ export class UserError {
 		status:400, code:'api#user#nid-is-required',
 		msg:'身分證字號必填'
 	};
+	public static NID_IS_EXISTS:HuntErrorItem = {
+		status:400, code:'api#user#nid-is-exists',
+		msg:'身分證字號已存在'
+	};
 	public static NID_IS_INVALID:HuntErrorItem = {
 		status:400, code:'api#user#nid-is-invalid',
 		msg:'身分證字號錯誤'

@@ -86,12 +86,12 @@ export = async function(fastify: FastifyInstance) {
 
 
 				if (nid === undefined) 		{ return res.errorHandler(UserError.NID_IS_REQUIRED); }
-				else						
-				if (TaiwanIdValidator.isNationalIdentificationNumberValid(nid) === false || 
-					TaiwanIdValidator.isNewResidentCertificateNumberValid(nid) === false) {
-					return res.errorHandler(UserError.NID_IS_INVALID);
-				}
-				else						{ payload.nid = nid; }  
+				else						{ 
+					const {rows:[row]} = await Postgres.query<User>(`SELECT * FROM users WHERE nid=$1;`, [nid]);
+					if (row !== undefined)  return res.errorHandler(UserError.NID_IS_EXISTS);
+					
+					payload.nid = nid; 
+				}  
 	
 				
 				if (name === undefined)		{ return res.errorHandler(UserError.NAME_IS_REQUIRED); }
