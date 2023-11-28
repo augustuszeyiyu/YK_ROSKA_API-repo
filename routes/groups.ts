@@ -85,10 +85,9 @@ export = async function(fastify: FastifyInstance) {
 
     {
         const schema = {
-			description: '加入改團，新增會員入團',
-			summary: '加入改團，新增會員入團',
+			description: '新增會員入會',
+			summary: '新增會員入會',
             params: {
-                description: '加入改團，新增會員入團',
                 type: 'object',
 				properties: {
                     sid: { type: 'string' }
@@ -160,6 +159,41 @@ export = async function(fastify: FastifyInstance) {
 
             return res.status(200).send(rows);
         });
+    } 
+
+    {
+        const schema = {
+			description: '下標',
+			summary: '下標',
+            params: {
+                description: '下標',
+                type: 'object',
+				properties: {
+                    gid:        { type: 'string' },
+                    bit_amount: { type: 'number' },
+                },
+            },
+		};
+
+        fastify.get<{Params:{gid:RoskaMembers['gid'], bit_amount:RoskaMembers['bid_amount']}}>('/group/bid/:gid', {schema}, async (req, res)=>{
+            
+            const {uid}:{uid:User['uid']} = req.session.token!;
+
+            const {gid, bit_amount} = req.params;
+
+            const {rows:[row]} = await Postgres.query(`
+                UPDATE roska_members m
+                SET bid_amount = $1
+                FROM roska_groups g
+                WHERE m.gid = g.gid
+                AND m.sid = g.sid
+                AND m.uid = $2
+                AND m.gid = $3
+                AND g.bid_start_time <= NOW() 
+                AND g.bid_end_time >= NOW();RETURNING *;`,[bit_amount, uid, gid]);
+
+            return res.status(200).send(row);
+        });   
     }
 
 };
