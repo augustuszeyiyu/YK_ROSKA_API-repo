@@ -38,9 +38,10 @@ CREATE TABLE IF NOT EXISTS "users" (
 
 
 CREATE UNIQUE INDEX IF NOT EXISTS "users#nid" on "users"("nid");
+CREATE UNIQUE INDEX IF NOT EXISTS "users#contact_mobile_number" on "users"("contact_mobile_number");
+
 CREATE INDEX IF NOT EXISTS "users#name" on "users" USING brin("name");
 CREATE INDEX IF NOT EXISTS "users#contact_home_number" on "users"("contact_home_number");
-CREATE UNIQUE INDEX IF NOT EXISTS "users#contact_mobile_number" on "users"("contact_mobile_number");
 
 CREATE INDEX IF NOT EXISTS "users#referrer_id" ON "users" USING brin("referrer_uid");
 CREATE INDEX IF NOT EXISTS "users#volunteer_id" ON "users" USING brin("volunteer_uid");
@@ -172,8 +173,8 @@ CREATE TABLE IF NOT EXISTS roska_serials (
     max_bid_amount              DECIMAL             NOT NULL DEFAULT 0,
     bid_unit_spacing            INTEGER             NOT NULL DEFAULT 0,
     frequency                   VARCHAR(15)         NOT NULL DEFAULT 'monthly',
-    bit_start_time              TIMESTAMPTZ         NOT NULL,
-    bit_end_time                TIMESTAMPTZ         NOT NULL,
+    bid_start_time              TIMESTAMPTZ         NOT NULL,
+    bid_end_time                TIMESTAMPTZ         NOT NULL,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)
@@ -185,18 +186,18 @@ BEFORE UPDATE ON roska_serials
 FOR EACH ROW
 EXECUTE FUNCTION update_update_time();
 
--- Create a BEFORE INSERT trigger to set the default value for bit_end_time
-CREATE OR REPLACE FUNCTION set_roska_serials_bit_end_time()
+-- Create a BEFORE INSERT trigger to set the default value for bid_end_time
+CREATE OR REPLACE FUNCTION set_roska_serials_bid_end_time()
 RETURNS TRIGGER AS $$
 DECLARE
     duration INT;
 BEGIN
     IF NEW.frequency = 'monthly' THEN
         duration := NEW.member_count; -- Use the member_count as the duration
-        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' months'::TEXT)::INTERVAL - INTERVAL '1 second';
+        NEW.bid_end_time := DATE_TRUNC('day', NEW.bid_start_time) + (duration || ' months'::TEXT)::INTERVAL - INTERVAL '1 second';
     ELSIF NEW.frequency = 'biweekly' THEN
         duration := NEW.member_count * 2; -- Biweekly, so multiply by 2
-        NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + (duration || ' weeks'::TEXT)::INTERVAL - INTERVAL '1 second';
+        NEW.bid_end_time := DATE_TRUNC('day', NEW.bid_start_time) + (duration || ' weeks'::TEXT)::INTERVAL - INTERVAL '1 second';
     END IF;  
     
     RETURN NEW;
@@ -204,10 +205,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Attach the trigger to the roska_serials table
-CREATE TRIGGER set_roska_serials_bit_end_time_trigger
+CREATE TRIGGER set_roska_serials_bid_end_time_trigger
 BEFORE INSERT OR UPDATE ON roska_serials
 FOR EACH ROW
-EXECUTE FUNCTION set_roska_serials_bit_end_time();
+EXECUTE FUNCTION set_roska_serials_bid_end_time();
 
 
 
@@ -220,8 +221,8 @@ DROP TABLE IF EXISTS roska_groups CASCADE;
 CREATE TABLE IF NOT EXISTS roska_groups (
 	gid 					    VARCHAR(17)		    NOT NULL PRIMARY KEY,
     sid                         VARCHAR(13)		    NOT NULL,
-    bit_start_time              TIMESTAMPTZ         NOT NULL,
-    bit_end_time                TIMESTAMPTZ         NOT NULL,
+    bid_start_time              TIMESTAMPTZ         NOT NULL,
+    bid_end_time                TIMESTAMPTZ         NOT NULL,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid)
@@ -233,21 +234,21 @@ BEFORE UPDATE ON roska_groups
 FOR EACH ROW
 EXECUTE FUNCTION update_update_time();
 
--- Create a BEFORE INSERT trigger to set the default value for bit_end_time
-CREATE OR REPLACE FUNCTION set_roska_groups_bit_end_time()
+-- Create a BEFORE INSERT trigger to set the default value for bid_end_time
+CREATE OR REPLACE FUNCTION set_roska_groups_bid_end_time()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Set the time part to 23:59:59
-    NEW.bit_end_time := DATE_TRUNC('day', NEW.bit_start_time) + INTERVAL '4 days - 1 second';
+    NEW.bid_end_time := DATE_TRUNC('day', NEW.bid_start_time) + INTERVAL '4 days - 1 second';
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Attach the trigger to the roska_groups table
-CREATE TRIGGER set_roska_groups_bit_end_time_trigger
+CREATE TRIGGER set_roska_groups_bid_end_time_trigger
 BEFORE INSERT OR UPDATE ON roska_groups
 FOR EACH ROW
-EXECUTE FUNCTION set_roska_groups_bit_end_time();
+EXECUTE FUNCTION set_roska_groups_bid_end_time();
 
 
 
