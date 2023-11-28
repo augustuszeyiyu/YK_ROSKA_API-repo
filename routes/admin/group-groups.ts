@@ -130,8 +130,8 @@ export = async function(fastify: FastifyInstance) {
 
             const {sid} = req.params;
             const {rows} = await Postgres.query(`
-                SELECT g.*, s.member_count, s.basic_unit_amount, s.min_bid_amount, s.max_bid_amount, s.bid_unit_spacing, s.g_frequency
-                FROM roska_goups g
+                SELECT g.*, s.member_count, s.basic_unit_amount, s.min_bid_amount, s.max_bid_amount, s.bid_unit_spacing, s.frequency
+                FROM roska_groups g
                 LEFT JOIN roska_serials s ON s.sid = g.sid
                 WHERE g.sid=$1;
             `, [sid]);
@@ -213,70 +213,29 @@ export = async function(fastify: FastifyInstance) {
 	}
 
     {
-        const schema_body = {
-            type: 'object',
-            properties: {
-                basic_unit_amount:  {type: "number"},
-                min_bid_amount:     {type: "number"},
-                max_bid_amount:     {type: "number"},
-                bid_unit_spacing:   {type: "number"},
-                bit_start_time:     {type: "number"},
-                bit_end_time:       {type: "number"},
-                g_frequency:        {type: "number"},
-            }
-        };
         const schema = {
-			description: '加入改團，新增會員入團',
-			summary: '加入改團，新增會員入團',
+			description: '搜尋該會組下的成員',
+			summary: '搜尋該會組下的成員',
             params: {
-                description: '加入改團，新增會員入團',
                 type: 'object',
 				properties: {
-                    gid: { type: 'string' }
+                    sid: { type: 'string' }
                 },
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        const PayloadValidator1 = $.ajv.compile(schema_body);
-        fastify.post<{Params:{gid:RoskaGroups['gid']}}>('/group/member/:gid', {schema}, async (req, res)=>{
-            const {uid}:{uid:User['uid']} = req.session.token!;
+        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group-members/:sid', {schema}, async (req, res)=>{
 
-            const {gid} = req.params;
-            
-            const {rows:[row]} = await Postgres.query(`SELECT mid FROM roska_members WHERE gid=$1 AND join_time=0 ORDER BY mid ASC LIMIT 1;`, [gid]);
-            await Postgres.query<RoskaMembers>(`UPDATE roska_members SET uid=$1, joing_time=$2 WHERE mid=$3 AND gid=$4 RETURNING *;`, [uid, Date.unix(), gid, row.mid]);
-
-            
-			res.status(200).send({gid});
-		});
-    }
-
-    {
-        const schema = {
-			description: '搜尋該團下的成員',
-			summary: '搜尋該團下的成員',
-            params: {
-                description: '搜尋該團下的成員',
-                type: 'object',
-				properties: {
-                    gid: { type: 'string' }
-                },
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
-
-            const {gid} = req.params;
+            const {sid} = req.params;
 
             const {rows} = await Postgres.query(
-                `SELECT m.mid, m.gid, u.uid, u.contact_mobile_number, u.address
-                FROM roska_groups g
-                INNER JOIN roska_members m ON g.gid=m=gid
+                `SELECT m.mid, m.sid, m.uid, u.contact_mobile_number, u.address
+                FROM roska_members m 
                 LEFT JOIN users u ON m.uid=u.uid
-                WHERE g.gid=$1
-                ORDER BY m.mid ASC;`,[gid]);
+                WHERE m.sid=$1
+                GROUP BY m.mid, m.sid, m.uid, u.contact_mobile_number, u.address
+                ORDER BY m.mid ASC;`,[sid]);
 
             return res.status(200).send(rows);
         });
