@@ -25,7 +25,7 @@ export = async function(fastify: FastifyInstance) {
             
             const {rows} = await Postgres.query<RoskaSerials>(`
                 SELECT * FROM roska_serials 
-                WHERE bit_start_time >= NOW()
+                WHERE bid_start_time >= NOW()
                 ORDER BY sid ASC`);
             return res.status(200).send(rows);
         });
@@ -143,6 +143,7 @@ export = async function(fastify: FastifyInstance) {
                     gid: { type: 'string' }
                 },
             },
+            security: [{ bearerAuth: [] }],
 		};
 
         fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
@@ -163,25 +164,43 @@ export = async function(fastify: FastifyInstance) {
 
     {
         const schema = {
-			description: '下標',
-			summary: '下標',
-            params: {
-                description: '下標',
+			description: '下注',
+			summary: '下注',
+            body: {
                 type: 'object',
 				properties: {
                     gid:        { type: 'string' },
-                    bit_amount: { type: 'number' },
+                    bid_amount: { type: 'number' },
                 },
+                required: ['gid', 'bid_amount']
             },
+            security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{gid:RoskaMembers['gid'], bit_amount:RoskaMembers['bid_amount']}}>('/group/bid/:gid', {schema}, async (req, res)=>{
+        fastify.post<{Body:{gid:RoskaMembers['gid'], bid_amount:RoskaMembers['bid_amount']}}>('/group/bid', {schema}, async (req, res)=>{
             
             const {uid}:{uid:User['uid']} = req.session.token!;
 
-            const {gid, bit_amount} = req.params;
+            const {gid, bid_amount} = req.body;
 
-            const {rows:[row]} = await Postgres.query(`
+            
+            const {rows:[roska_group]} = await Postgres.query<RoskaGroups>(`SELECT * FROM roska_groups WHERE gid=$1;`, [gid]);
+
+            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`
+                SELECT * 
+                FROM roska_serials 
+                WHERE sid=$1 
+                AND max_bid_amount >= $2 
+                AND min_bid_amount <= $2;`, 
+                [roska_group.sid, bid_amount]);
+              
+            
+            if (roska_serial === undefined) {
+                return res.errorHandler(GroupError.INVALID_bid_amount);
+            }
+
+
+            const {rowCount} = await Postgres.query(`
                 UPDATE roska_members m
                 SET bid_amount = $1
                 FROM roska_groups g
@@ -189,10 +208,15 @@ export = async function(fastify: FastifyInstance) {
                 AND m.sid = g.sid
                 AND m.uid = $2
                 AND m.gid = $3
-                AND g.bid_start_time <= NOW() 
-                AND g.bid_end_time >= NOW();RETURNING *;`,[bit_amount, uid, gid]);
+                AND g.bid_start_time >= NOW() 
+                AND g.bid_end_time <= NOW() 
+                RETURNING *;`,[bid_amount, uid, gid]);
 
-            return res.status(200).send(row);
+            if (rowCount === 0) {
+                return res.errorHandler(GroupError.INVALID_bid_start_time, [roska_group.bid_start_time, roska_group.bid_end_time]);
+            }
+
+            return res.status(200).send({});
         });   
     }
 

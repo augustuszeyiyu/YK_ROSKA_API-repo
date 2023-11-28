@@ -20,10 +20,10 @@ export = async function(fastify: FastifyInstance) {
                 min_bid_amount:     {type: "number"},
                 max_bid_amount:     {type: "number"},
                 bid_unit_spacing:   {type: "number"},
-                bit_start_time:     {type: "string"},
+                bid_start_time:     {type: "string"},
                 frequency:          {type: "string", pattern: GenWhiteListPattern([...Object.values(GroupFrequency)]).source },
             },
-            required: ['member_count', 'basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'bit_start_time', 'frequency']
+            required: ['member_count', 'basic_unit_amount', 'min_bid_amount', 'max_bid_amount', 'bid_unit_spacing', 'bid_start_time', 'frequency']
         };
 
         const schema = {
@@ -40,7 +40,7 @@ export = async function(fastify: FastifyInstance) {
                         min_bid_amount: 200,
                         max_bid_amount: 1000,
                         bid_unit_spacing: 200,
-                        bit_start_time: '2023-11-15',
+                        bid_start_time: '2023-11-15',
                         frequency: 'monthly'
                     }
                 ]
@@ -63,7 +63,7 @@ export = async function(fastify: FastifyInstance) {
             }
 
             const {uid, role}= req.session.token!;
-            const {member_count, basic_unit_amount, min_bid_amount, max_bid_amount, bid_unit_spacing, bit_start_time, frequency} = req.body;
+            const {member_count, basic_unit_amount, min_bid_amount, max_bid_amount, bid_unit_spacing, bid_start_time, frequency} = req.body;
 
 
             let _s= '', sid_prefix = '', sid_date = '';
@@ -74,12 +74,12 @@ export = async function(fastify: FastifyInstance) {
 
             console.log({row_sid});
                 
-            if (row_sid === undefined)  _s = 'YA0000-';
+            if (row_sid === undefined)  _s = 'YA1000-';
             else                        _s = row_sid.sid;
             console.log({_s});
            
             
-            // NOTE: YA0001-231001,  find YA0001 
+            // NOTE: YA1001-231001,  find YA1000 
             const _v = _s.split('-');
             sid_prefix = _v[0];
             sid_date = _v[1];
@@ -88,14 +88,14 @@ export = async function(fastify: FastifyInstance) {
             
             
             // NOTE: get year and month
-            const inputDate = new Date(bit_start_time);
+            const inputDate = new Date(bid_start_time);
             const formattedDate = inputDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }).replace(/\//g, '');
-            console.log({inputDate, formattedDate}); // Output: 2311
+            console.log({bid_start_time, inputDate, formattedDate}); // Output: 2311
 
             const {rows:[row_bit_time]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
                 SELECT sid FROM roska_serials
-                WHERE bit_start_time::date = $1
-                ORDER BY sid DESC;`, [bit_start_time]);
+                WHERE bid_start_time::date = $1
+                ORDER BY sid DESC;`, [bid_start_time]);
             console.log({row_bit_time});
             
             
@@ -123,7 +123,7 @@ export = async function(fastify: FastifyInstance) {
                 if (min_bid_amount !== undefined)       { payload.min_bid_amount = min_bid_amount; }
                 if (max_bid_amount !== undefined)       { payload.max_bid_amount = max_bid_amount; }
                 if (bid_unit_spacing !== undefined)     { payload.bid_unit_spacing = bid_unit_spacing; }
-                if (bit_start_time !== undefined)       { payload.bit_start_time = bit_start_time; }
+                if (bid_start_time !== undefined)       { payload.bid_start_time = bid_start_time; }
                 if (frequency !== undefined)            { payload.frequency = frequency; }
             }
             

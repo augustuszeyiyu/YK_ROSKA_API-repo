@@ -12,8 +12,8 @@ export interface RoskaSerials {
     max_bid_amount: number,
     bid_unit_spacing: number,
     frequency: GroupFrequencys,
-    bit_start_time: string,
-    bit_end_time: string,
+    bid_start_time: string,
+    bid_end_time: string,
     update_time: string,
     create_time: string,
 }
@@ -22,8 +22,8 @@ export type RoskaSerialsRequiredInfo = Omit<RoskaSerials, 'sid'|'uid'|'update_ti
 export interface RoskaGroups {
     gid: uniqid,
     sid: uniqid,
-    bit_start_time: string,
-    bit_end_time: string,
+    bid_start_time: string,
+    bid_end_time: string,
     update_time: string,
     create_time: string,
 }

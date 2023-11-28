@@ -177,27 +177,28 @@ export = async function(fastify: FastifyInstance) {
                 return res.errorHandler(GroupError.SID_NOT_FOUND);
             }
 
-
+            console.log();
+            
             let group_sql_list:string[] = [];
-            const startTime = new Date(group_serials.bit_start_time);
+            const startTime = new Date(group_serials.bid_start_time);
             for (let index = 1; index <= group_serials.cycles; index++) {
 
                 // NOTE: Generate gid
                 const gid = `${sid}-t`  + `${index}`.padStart(2, '0');
 
                 // NOET: Calculate Start Time
-                let bit_start_time:Date;
+                let bid_start_time:Date;
                 if (group_serials.frequency === 'monthly') {
-                    bit_start_time = calculateMonthlyBitStartTime(startTime, index);
+                    bid_start_time = calculateMonthlyBitStartTime(startTime, index);
                 } 
                 else {
-                    bit_start_time = calculateBiWeeklyBitStartTime(startTime, index)
+                    bid_start_time = calculateBiWeeklyBitStartTime(startTime, index)
                 }
 
-                console.log(bit_start_time);
+                console.log(bid_start_time);
                 
                 // Add the member information to the list
-                const payload:Partial<RoskaGroups> = { gid, sid, bit_start_time: new Date(bit_start_time).toISOString() }
+                const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toISOString() }
                 group_sql_list.push(PGDelegate.format(`
                     INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
                     VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')});`, payload)
@@ -344,15 +345,17 @@ export = async function(fastify: FastifyInstance) {
         return date.getDay() === 0 || date.getDay() === 6;
     }
       
-    function calculateMonthlyBitStartTime(bit_start_time:Date, index:number):Date {
+    function calculateMonthlyBitStartTime(bid_start_time:Date, index:number):Date {
+        console.log(bid_start_time);
+        
         // Calculate Start Time with month and year rollover and weekend avoidance
-        const newMonth = bit_start_time.getMonth() + index;
+        const newMonth = bid_start_time.getMonth() + index;
         const yearOffset = Math.floor(newMonth / 12); // Calculate how many years to add
         const monthInYear = newMonth % 12; // Calculate the month within the year
         console.log({newMonth, yearOffset, monthInYear});
         
 
-        const newYear = bit_start_time.getFullYear() + yearOffset;
+        const newYear = bid_start_time.getFullYear() + yearOffset;
         let newDate = new Date(newYear, monthInYear, 10);
 
         console.log({newYear, newDate});
@@ -368,29 +371,29 @@ export = async function(fastify: FastifyInstance) {
             }
         }
       
-        return newDate; // Return the adjusted bit_start_time
+        return newDate; // Return the adjusted bid_start_time
     }
 
-    function calculateBiWeeklyBitStartTime(bit_start_time:Date, index:number) {
+    function calculateBiWeeklyBitStartTime(bid_start_time:Date, index:number) {
         // Calculate the number of days to add for biweekly scheduling
         const daysToAdd = (index - 1) * 14; // 14 days for biweekly (2 weeks)
       
         // Add the calculated days to the start date
-        bit_start_time.setDate(bit_start_time.getDate() + daysToAdd);
+        bid_start_time.setDate(bid_start_time.getDate() + daysToAdd);
       
 
         // Check if the calculated date is a weekend
-        if (isWeekend(bit_start_time) === true) {
-            if (bit_start_time.getDay() === 0) { // If it's Sunday
+        if (isWeekend(bid_start_time) === true) {
+            if (bid_start_time.getDay() === 0) { // If it's Sunday
                 // Subtract 2 days to schedule it on the previous Friday.
-                bit_start_time.setDate(bit_start_time.getDate() - 2);
-            } else if (bit_start_time.getDay() === 6) { // If it's Saturday
+                bid_start_time.setDate(bid_start_time.getDate() - 2);
+            } else if (bid_start_time.getDay() === 6) { // If it's Saturday
                 // Subtract 1 day to schedule it on the previous Friday.
-                bit_start_time.setDate(bit_start_time.getDate() - 1);
+                bid_start_time.setDate(bid_start_time.getDate() - 1);
             }
         }
       
-        return bit_start_time;
+        return bid_start_time;
     }
      
     function shuffleCandidate(array:RoskaCandidate[]) {

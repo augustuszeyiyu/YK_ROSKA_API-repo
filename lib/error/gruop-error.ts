@@ -8,8 +8,12 @@ export class GroupError {
 		status:400, code:'api#gruop#gid-not-found',
 		msg:'gid not found.'
 	};
-	public static INVALID_BIT_START_TIME:HuntErrorItem = {
+	public static INVALID_bid_start_time:HuntErrorItem = {
 		status:400, code:'api#gruop#invalid-bid-start-time',
-		msg:'Invalid bid start time.'
-	};	
+		msg:'下注時間錯誤.'
+	};
+	public static INVALID_bid_amount:HuntErrorItem = {
+		status:400, code:'api#gruop#invalid-bid-amount',
+		msg:'下注金額錯誤.'
+	};
 };
