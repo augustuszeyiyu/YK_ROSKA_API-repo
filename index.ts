@@ -148,7 +148,7 @@ Promise.chain(async()=>{
 
 		fastify
 		.addHook('preHandler', async(req, res)=>{
-			res.header('Access-Control-Allow-Origin', Config.serve_at.url);
+			res.header('Access-Control-Allow-Origin', '*');
 		})
 		.addHook('preHandler', async(req)=>{
 			req.time_milli = Date.now();
