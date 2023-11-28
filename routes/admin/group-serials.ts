@@ -88,9 +88,9 @@ export = async function(fastify: FastifyInstance) {
             
             
             // NOTE: get year and month
-            const inputDate = new Date('2023-11-15');
+            const inputDate = new Date(bit_start_time);
             const formattedDate = inputDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }).replace(/\//g, '');
-            console.log({formattedDate}); // Output: 2311
+            console.log({inputDate, formattedDate}); // Output: 2311
 
             const {rows:[row_bit_time]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
                 SELECT sid FROM roska_serials
