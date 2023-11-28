@@ -109,15 +109,30 @@ Promise.chain(async()=>{
 	// multipart/form-data
 	.register((await import('@fastify/multipart')).default)
 	
-	.register((await import('@fastify/static')).default, {root:`/home/cheny/upload_cache`, prefix:'/file', decorateReply:true})
+	.register((await import('@fastify/static')).default, {root:`/tmp/upload_cache`, prefix:'/file', decorateReply:true})
 
-	.register((await import('@fastify/cors')).default, {
-		origin: Config.serve_at.url, // Replace with your actual origin
-		methods: ['GET', 'POST', 'DELETE', 'OPTION'],
-		allowedHeaders: ['Authorization', 'Content-Type'],
-		credentials: true,
+	// .register((await import('@fastify/cors')).default, {
+	// 	origin: Config.serve_at.url, // Replace with your actual origin
+	// 	methods: ['GET', 'POST', 'DELETE', 'OPTION'],
+	// 	allowedHeaders: ['Authorization', 'Content-Type'],
+	// 	credentials: true,		
+	// })
+	.register(require('@fastify/cors'), (instance) => {
+		return (req, callback) => {
+			const corsOptions = {
+				// This is NOT recommended for production as it enables reflection exploits
+				origin: true
+			};
+		
+			// do not include CORS headers for requests from localhost
+			if (/^localhost$/m.test(req.headers.origin)) {
+				corsOptions.origin = false
+			}
+		
+			// callback expects two parameters: error and options
+			callback(null, corsOptions)
+		}
 	})
-
 	.register(async(fastify, opts)=>{
 		
 		fastify.decorateReply('errorHandler', function(error_info:any, detail?:any) {

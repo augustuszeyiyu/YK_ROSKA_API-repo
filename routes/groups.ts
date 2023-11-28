@@ -1,5 +1,4 @@
-import payload = require('/package.json');
-import { FastifyInstance, FastifyReply, FastifyRequest, FastifySchema } 	from "fastify";
+import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
 import { RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
