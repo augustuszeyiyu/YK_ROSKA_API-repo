@@ -1,7 +1,7 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaCandidate, RoskaGroups, RoskaGroupsRequiredInfo, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
+import { RoskaBids, RoskaCandidate, RoskaGroups, RoskaGroupsRequiredInfo, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
@@ -280,7 +280,7 @@ export = async function(fastify: FastifyInstance) {
 
             const {sid} = req.params;
 
-            
+
             const {rows} = await Postgres.query(
                 `SELECT m.mid, m.sid, m.uid, u.contact_mobile_number, u.address
                 FROM roska_members m 
@@ -312,9 +312,9 @@ export = async function(fastify: FastifyInstance) {
             const {uid, role} = req.session.token!;
 
             const {gid} = req.params;
-            const {rows:member_info} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE gid=$1 AND win=false ORDER BY bid_amount DESC;`, [gid]);
+            const {rows:roska_bids} = await Postgres.query<RoskaBids>(`SELECT * FROM roska_bids WHERE gid=$1 ORDER BY bid_amount DESC;`, [gid]);
 
-            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [member_info[0].sid]);
+            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [roska_bids[0].sid]);
 
             console.log(roska_serial.bid_unit_spacing, roska_serial.max_bid_amount);
             
@@ -323,21 +323,53 @@ export = async function(fastify: FastifyInstance) {
             
             for (let index = roska_serial.max_bid_amount; index > roska_serial.min_bid_amount; index-=roska_serial.bid_unit_spacing) {
 
-                for (const {uid, mid, gid, sid, bid_amount} of member_info) {
+                for (const {mid, gid, sid, uid, bid_amount} of roska_bids) {
 
                     if (roska_serial.max_bid_amount === bid_amount) {
-                        candidate.push({uid, mid, gid, sid, bid_amount});
+                        candidate.push({mid, gid, sid, uid, bid_amount});
                     }                    
                 }
 
                 if (candidate.length > 0) break;                
             }
 
-            const winner = shuffleCandidate(candidate);
-            console.log(winner);
+            const winner_index = Math.floor(Math.random() * candidate.length);
+            const winner_candidate = candidate[winner_index];
+            console.log(winner_index);
             
+            // NOTE: updaet roska_bids
+            {
+                const sql = PGDelegate.format(`
+                    UPDATE roska_bids 
+                        SET win = true 
+                        WHERE mid={mid} 
+                        AND gid={gid}
+                        AND sid={sid}
+                        AND uid={uid}
+                        AND bid_amount={bit_amount};`, 
+                    winner_candidate);
+
+                await Postgres.query(sql);
+            }
+
+            // NOTE: updaet roska_groups
+            {
+                const sql = PGDelegate.format(`
+                    UPDATE roska_groups
+                        SET mid = {mid},
+                            uid = {uid},
+                            bid_amount = {bit_amount},
+                            win_time = NOW()
+                        WHERE gid={gid}
+                        AND sid={sid};`, 
+                    winner_candidate);
+
+                await Postgres.query(sql);
+            }
+
+
             
-            return res.status(200).send({});
+            return res.status(200).send(winner_candidate);
         });
     }
 
@@ -395,12 +427,5 @@ export = async function(fastify: FastifyInstance) {
         }
       
         return bid_start_time;
-    }
-     
-    function shuffleCandidate(array:RoskaCandidate[]) {
-        for (let i = array.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [array[i], array[j]] = [array[j], array[i]];
-        }
     }
 };

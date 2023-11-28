@@ -29,6 +29,17 @@ export interface RoskaGroups {
 }
 export type RoskaGroupsRequiredInfo = Omit<RoskaGroups, 'gid'|'sid'|'update_time'|'create_time'>;
 
+export interface RoskaBids {
+    mid: uniqid,
+    gid: RoskaGroups['gid'],
+    sid: RoskaGroups['sid'],
+    uid: User['uid'],
+    bid_amount: number,
+    win: boolean,
+    update_time: string,
+    create_time: string,
+}
+
 export interface RoskaMembers {
     mid: uniqid,
     gid: RoskaGroups['gid'],
