@@ -223,6 +223,12 @@ CREATE TABLE IF NOT EXISTS roska_groups (
     sid                         VARCHAR(13)		    NOT NULL,
     bid_start_time              TIMESTAMPTZ         NOT NULL,
     bid_end_time                TIMESTAMPTZ         NOT NULL,
+    uid                         VARCHAR(32)         NOT NULL DEFAULT '',
+    mid                         VARCHAR(20)         NOT NULL DEFAULT '',
+    win_time                    TIMESTAMPTZ,
+    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
+    installment_deadline        TIMESTAMPTZ,
+    assignment_path             LTREE               NOT NULL DEFAULT '',
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid)
@@ -252,22 +258,33 @@ EXECUTE FUNCTION set_roska_groups_bid_end_time();
 
 
 
-
 -- roska_members
-DROP TABLE IF EXISTS roska_members CASCADE;
-CREATE TABLE IF NOT EXISTS roska_members (
+DROP TABLE IF EXISTS roska_bids CASCADE;
+CREATE TABLE IF NOT EXISTS roska_bids (
     mid 					    VARCHAR(20)		    NOT NULL,
     gid 					    VARCHAR(17)		    NOT NULL,
     sid                         VARCHAR(13)			NOT NULL,
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
     bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win                         BOOLEAN,
+	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (mid, gid, sid, uid),
+    FOREIGN KEY (sid) REFERENCES roska_serials(sid),
+    FOREIGN KEY (gid) REFERENCES roska_groups(gid),
+    FOREIGN KEY (uid) REFERENCES users(uid)
+);
+
+-- roska_members
+DROP TABLE IF EXISTS roska_members CASCADE;
+CREATE TABLE IF NOT EXISTS roska_members (
+    mid 					    VARCHAR(20)		    NOT NULL,
+    sid                         VARCHAR(13)			NOT NULL,
+    uid                         VARCHAR(32)         NOT NULL DEFAULT '',
+    win_gid                     VARCHAR(17)		    NOT NULL DEFAULT '',
     win_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win_time                    TIMESTAMPTZ,
     transition                  SMALLINT            NOT NULL DEFAULT 0,
-    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
-    installment_deadline        TIMESTAMPTZ,
-    assignment_path             LTREE               NOT NULL DEFAULT '',
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     PRIMARY KEY (mid, gid, sid, uid),
