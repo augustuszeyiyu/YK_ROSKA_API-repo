@@ -30,11 +30,11 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(rows);
         });
     }
-    /** 進行中的會組 **/
+    /** 已加入的會組 **/
     {
         const schema = {
-			description: '進行中的會組',
-			summary: '進行中的會組',
+			description: '已加入的會組',
+			summary: '已加入的會組',
             params: {},
             security: [{ bearerAuth: [] }],
 		};
@@ -44,12 +44,12 @@ export = async function(fastify: FastifyInstance) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
             
+            const {uid} = req.session.token!;
             const {rows} = await Postgres.query<RoskaSerials>(`
-                SELECT s.*, g.bit_start_time as g_bit_start_time, g.bit_end_time as g_bit_end_time
-                FROM roska_groups g
-                LEFT JOIN roska_serials s ON s.sid = g.sid
-                WHERE NOW() <= g.bit_start_time AND NOW() >= g.bit_end_time
-                ORDER BY sid ASC`);
+                SELECT s.*
+                FROM roska_members m
+                INNER JOIN roska_serials s ON m.sid = s.sid
+                WHERE m.uid=$1 GROUP BY m.sid, s.sid;`, [uid]);
 
             return res.status(200).send(rows);
         });

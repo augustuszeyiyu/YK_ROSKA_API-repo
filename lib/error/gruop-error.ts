@@ -9,7 +9,7 @@ export class GroupError {
 		msg:'gid not found.'
 	};
 	public static INVALID_BIT_START_TIME:HuntErrorItem = {
-		status:400, code:'api#gruop#invalid-bit-start-time',
-		msg:'Invalid bit start time.'
+		status:400, code:'api#gruop#invalid-bid-start-time',
+		msg:'Invalid bid start time.'
 	};	
 };
