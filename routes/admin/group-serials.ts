@@ -265,7 +265,7 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(row);
         });
     }
-
+    
 
     function generateNextSid(last_group_id:string) {
         let  currentPrefix = last_group_id.substring(1,2);

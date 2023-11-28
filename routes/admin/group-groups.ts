@@ -1,7 +1,7 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaGroups, RoskaGroupsRequiredInfo, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
+import { RoskaCandidate, RoskaGroups, RoskaGroupsRequiredInfo, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
@@ -214,8 +214,58 @@ export = async function(fastify: FastifyInstance) {
 
     {
         const schema = {
-			description: '搜尋該會組下的成員',
-			summary: '搜尋該會組下的成員',
+			description: '新增會員入會',
+			summary: '新增會員入會',
+            params: {
+                type: 'object',
+				properties: {
+                    uid: { type: 'string' },
+                    sid: { type: 'string' }
+                },
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.post<{Params:{uid:User['uid'], sid:RoskaSerials['sid']}}>('/group-groups/member/:uid/:sid', {schema}, async (req, res)=>{
+
+
+            const {uid, sid} = req.params;
+
+
+            const {rows:roska_groups} = await Postgres.query<RoskaGroups>(`SELECT * FROM roska_groups WHERE sid=$1;`, [sid]);
+            if (roska_groups === undefined) {
+                return res.errorHandler(GroupError.SID_NOT_FOUND);
+            }
+
+
+            const {rows:all_member_info} = await Postgres.query(`SELECT count(mid) FROM roska_members WHERE sid=$1 AND gid=$2 GROUP BY mid;`, [sid, roska_groups[0].gid]);
+
+            const {rows:member_info} = await Postgres.query(`SELECT mid FROM roska_members WHERE sid=$1 AND uid=$2 ORDER BY mid ASC;`, [sid, uid]);
+            if (member_info.length === roska_groups.length)  return res.status(200).send({});
+
+            
+            const next = `${all_member_info.length+1}`.padStart(2, '0');
+            const mid = `${sid}-${next}`;
+            const member_list:string[] = [];
+            for (const {gid, sid} of roska_groups) {
+                const data = PGDelegate.format(`INSERT INTO roska_members (sid, gid, mid, uid) VALUES({sid}, {gid}, {mid}, {uid});`, {sid, gid, mid, uid});
+                member_list.push(data);
+            }
+
+            
+            console.log(member_list);
+            await Postgres.query(member_list.join('\n'));
+
+          
+            
+			res.status(200).send({});
+		});
+    }
+
+    {
+        const schema = {
+			description: '下標',
+			summary: '下標',
             params: {
                 type: 'object',
 				properties: {
@@ -238,6 +288,54 @@ export = async function(fastify: FastifyInstance) {
                 ORDER BY m.mid ASC;`,[sid]);
 
             return res.status(200).send(rows);
+        });
+    }
+
+    /** 開標 gid **/
+    {
+        const schema = {
+            description: '開標 gid',
+            summary: '開標 gid',
+            params: {
+                type: 'object',
+                properties:{
+                    gid: {type: 'string'}
+                },
+                required:["gid"],
+            },
+            security: [{ bearerAuth: [] }],
+        };
+
+        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group-bid/:gid', {schema}, async (req, res)=>{
+            const {uid, role} = req.session.token!;
+
+            const {gid} = req.params;
+            const {rows:member_info} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE gid=$1 AND win=false ORDER BY bid_amount DESC;`, [gid]);
+
+            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [member_info[0].sid]);
+
+            console.log(roska_serial.bid_unit_spacing, roska_serial.max_bid_amount);
+            
+
+            const candidate:RoskaCandidate[] = []; 
+            
+            for (let index = roska_serial.max_bid_amount; index > roska_serial.min_bid_amount; index-=roska_serial.bid_unit_spacing) {
+
+                for (const {uid, mid, gid, sid, bid_amount} of member_info) {
+
+                    if (roska_serial.max_bid_amount === bid_amount) {
+                        candidate.push({uid, mid, gid, sid, bid_amount});
+                    }                    
+                }
+
+                if (candidate.length > 0) break;                
+            }
+
+            const winner = shuffleCandidate(candidate);
+            console.log(winner);
+            
+            
+            return res.status(200).send({});
         });
     }
 
@@ -294,5 +392,11 @@ export = async function(fastify: FastifyInstance) {
       
         return bit_start_time;
     }
-      
+     
+    function shuffleCandidate(array:RoskaCandidate[]) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
 };

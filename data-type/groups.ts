@@ -44,3 +44,11 @@ export interface RoskaMembers {
     update_time: string,
     create_time: string,
 }
+
+export interface RoskaCandidate {
+    uid:RoskaMembers['uid'], 
+    mid:RoskaMembers['mid'], 
+    gid:RoskaMembers['gid'], 
+    sid:RoskaMembers['sid'], 
+    bid_amount:RoskaMembers['bid_amount']
+}
