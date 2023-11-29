@@ -1,13 +1,16 @@
 import fs from 'fs';
 import path from 'path';
-import { FastifyInstance } 	from "fastify";
-import Postgres from '/data-source/postgres.js';
-import { BaseError } from '/lib/error';
 import TrimId from 'trimid';
 import { PGDelegate } from 'pgdelegate';
+import { FastifyInstance } 	from "fastify";
+import Postgres from '/data-source/postgres.js';
+import { BaseError, FileError } from '/lib/error';
+import { MAX_FILE_SIZE_BYTES } from '/lib/constants';
 
 import Config from '/config.default.js';
-import { RoskaSerials } from '/data-type/groups';
+
+
+
 
 export = async function(fastify: FastifyInstance) {
 	/** /api/file/upload **/
@@ -39,8 +42,18 @@ export = async function(fastify: FastifyInstance) {
             
             
             if (!data) {
-                return res.status(400).send({ error: 'No file uploaded' });
+                return res.errorHandler(FileError.NO_UPLOAD_FILE);
             }
+
+
+            // Check file size
+            const contentLength = req.headers['content-length'];
+            const fileSizeBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+            if (fileSizeBytes > MAX_FILE_SIZE_BYTES) {
+                return res.errorHandler(FileError.MAXIMUM_UPLOAD_SIZE_EXCEEDED);
+            }
+
 
             // Access the properties of the uploaded file
             const {
@@ -51,6 +64,8 @@ export = async function(fastify: FastifyInstance) {
                 encoding,
                 mimetype,
             } = data;
+
+            
 
             console.log({ fieldname, filename, encoding, mimetype });
 
@@ -67,9 +82,10 @@ export = async function(fastify: FastifyInstance) {
             const fid = TrimId.NEW.toString(32);
             const newFilename = `${fid}-${filename}`;
             const newFilePath = path.resolve(uploadDir, newFilename);
-            const writeStream = fs.createWriteStream(`${newFilePath}`);
+           
             
             
+
             const insert_data = {
                 fid,
                 uid,
@@ -80,21 +96,33 @@ export = async function(fastify: FastifyInstance) {
             }
 
 
+            const uploadFile = () => new Promise( (resolve, reject) => {
+                const writeStream = fs.createWriteStream(newFilePath);
+                file.pipe(writeStream);
 
-            file.pipe(writeStream);
+                writeStream.on('error', (err) => {
+                    console.error('Error writing file:', err);
+                    reject(err);
+                });
 
+                writeStream.on('close', () => {
+                    console.log('WriteStream close.');
+                    resolve(true);
+                });
 
-            // Handle events on the write stream (optional)
-            writeStream.on('error', (err) => {
-                console.error('Error writing file:', err);
-                return res.errorHandler(BaseError.UNEXPECTED_SERVER_ERROR);
+                writeStream.on('finish', () => {
+                    console.log('File saved successfully.');
+                    resolve(true);
+                });
             });
 
-            writeStream.on('finish', () => {
-                console.log('File saved successfully');
-            });
 
+            const upload_result = await uploadFile().catch((e:Error)=>e);
+            if (upload_result instanceof Error) {
+                return res.errorHandler(BaseError.UNEXPECTED_SERVER_ERROR, [upload_result]);
+            }
             
+
             const sql = PGDelegate.format(`
                 INSERT INTO files(fid, uid, file_path, file_name, encoding, mimetype)
                 VALUES ({fid}, {uid}, {file_path}, {file_name}, {encoding}, {mimetype})
