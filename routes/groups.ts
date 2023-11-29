@@ -108,7 +108,13 @@ export = async function(fastify: FastifyInstance) {
             }
 
 
-            const {rows: [member_count]} = await Postgres.query<{count:num_str}>(`SELECT count(mid) FROM roska_members WHERE sid=$1 GROUP BY mid;`, [sid]);
+            const {rows: [member_count]} = await Postgres.query<{count:num_str}>(`
+                SELECT COALESCE(COUNT(m.mid), 0) AS count
+                FROM roska_members m
+                LEFT JOIN roska_serials s ON m.sid = s.sid
+                WHERE m.sid = $1;`, [sid]);
+            
+            
             const total_members = Number(member_count.count);
             if (roska_serial.cycles === total_members) {
                 return res.errorHandler(GroupError.GROUP_SERIAL_IS_FULL);

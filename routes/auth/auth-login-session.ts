@@ -173,12 +173,12 @@ export = async function(fastify:FastifyInstance) {
 
 			// NOTE: Generate JWT Token
 			const TOKEN_INFO:RoskaSessToken = {
-				tid: TrimId.NEW.toString(32),
-				uid: user_id!,
+				tid:  TrimId.NEW.toString(32),
+				uid:  user_id!,
 				role: user_role,
-				iss: 'YK5-ROSKA',
-				iat: Date.unix(),
-				exp: Date.unix() + LOGIN_SESSION_DURATION,
+				iss:  'YK5-ROSKA',
+				iat:  Date.unix(),
+				exp:  Date.unix() + LOGIN_SESSION_DURATION,
 			};
 			const AUTH_DATA = {
 				id: 			TOKEN_INFO.tid,
@@ -189,13 +189,11 @@ export = async function(fastify:FastifyInstance) {
 			};
 			console.log('===============>', TOKEN_INFO, AUTH_DATA);	
 			const token = BWT.GenBWT(TOKEN_INFO, Config.secret.session);
-			console.log('===============>', token);
 			
 
 
 			// NOTE: Query auth info for updating or Insert a new auth document
-			const sql = PGDelegate.format(`INSERT INTO login_sessions(${Object.keys(AUTH_DATA)}) VALUES (${Object.keys(AUTH_DATA).map(e => `{${e}}` ).join(', ')})`, AUTH_DATA);
-			console.log(sql);			
+			const sql = PGDelegate.format(`INSERT INTO login_sessions(${Object.keys(AUTH_DATA)}) VALUES (${Object.keys(AUTH_DATA).map(e => `{${e}}` ).join(', ')})`, AUTH_DATA);		
 			await Postgres.query(sql);
 
 			await Postgres.query(`DELETE FROM captchas WHERE captcha_text = $1;`, [captcha]);
@@ -205,23 +203,22 @@ export = async function(fastify:FastifyInstance) {
 				exp: TOKEN_INFO.exp + LOGIN_SESSION_DURATION
 			};
 			const refresh_token = BWT.GenBWT(REFRESH_INFO, Config.secret.session);
-			console.log(refresh_token);
 
 
 			res
 			.header('Authorization', token)
 			.setCookie(Config.cookie.cookie_session_id, token, {
 				path:'/',
-				httpOnly:true,
-				expires:new Date(AUTH_DATA.expired_time*1000),
-				domain: Config.cookie.domain || undefined
+				httpOnly: true,
+				expires:  new Date(AUTH_DATA.expired_time * 1000),
+				domain:   Config.cookie.domain || undefined
 			})
 			.status(200)
 			.send({
-				access_token:token,
-				refresh_token:refresh_token,
-				expired_time:AUTH_DATA.expired_time,
-				login_time:AUTH_DATA.login_time
+				access_token:  token,
+				refresh_token: refresh_token,
+				expired_time:  AUTH_DATA.expired_time,
+				login_time:    AUTH_DATA.login_time
 			});
 		});
 	}
