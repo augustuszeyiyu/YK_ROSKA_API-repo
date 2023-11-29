@@ -3,6 +3,7 @@
  *	Create: 2021-08-10
 **/
 import 'extes';
+import $ from "shared-storage";
 import fs from 'fs';
 import path from 'path';
 import fastify, { FastifyError } from "fastify";
@@ -15,14 +16,13 @@ reroot.root_path = `${reroot.root_path}/_dist`;
 import phook from 'phook';
 phook.configure({durations:{UNHANDLED_ERROR:100}});
 
-import $ from "shared-storage";
+
 import PostgreFactory from "/data-source/postgres.js";
 import BWT from '/lib/web-token.js';
 
 // Load configuration file ASAP
 import payload = require('/package.json');
 import Config from '/config.default.js';
-import { log } from 'console';
 import { BaseError } from './lib/error.js';
 
 
@@ -217,7 +217,7 @@ Promise.chain(async()=>{
 		.register((await import('/routes/register.js')).default,					{prefix:'/'})
 		.register((await import('/routes/users.js')).default,						{prefix:'/'})
 		.register((await import('/routes/groups.js')).default,						{prefix:'/'})
-		.register((await import('/routes/upload.js')).default,						{prefix:'/'})
+		.register((await import('/routes/files.js')).default,						{prefix:'/'})
 		.register((await import('/routes/auth/auth.js')).default,					{prefix:'/auth'})
 		.register((await import('/routes/admin/admin.js')).default,					{prefix:'/admin'})
 

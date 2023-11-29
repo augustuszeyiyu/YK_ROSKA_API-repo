@@ -28,8 +28,8 @@ export default async function() {
 	// Prepare storage directories
 	{
 		await fsp.mkdir( path.resolve(Config.storage_root), {recursive:true} );
-		await fsp.mkdir( path.resolve(Config.storage_root, 'upload_cache'), {recursive:true} );
-		await fsp.mkdir( path.resolve(Config.storage_root, 'files'), {recursive:true} );
+		await fsp.mkdir( path.resolve(Config.storage_root, 'excels'), {recursive:true} );
+		await fsp.mkdir( path.resolve(Config.storage_root, 'images'), {recursive:true} );
 	}
 
 

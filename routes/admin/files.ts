@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import * as ExcelJS from 'exceljs';
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
 import { BaseError } from '/lib/error';
@@ -7,9 +8,10 @@ import TrimId from 'trimid';
 import { PGDelegate } from 'pgdelegate';
 
 import Config from '/config.default.js';
+import { RoskaSerials } from '/data-type/groups';
 
 export = async function(fastify: FastifyInstance) {
-	/** /api/version **/
+	/** /api/file/upload **/
 	{
 		const schema = {
 			description: '上傳檔案，請用 postman 測試',
@@ -26,11 +28,7 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         //@ts-ignore
-		fastify.post('/upload', {schema}, async (req, res) => {            
-            if ( req.session.is_login === false ) {
-				return res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-			}
-
+		fastify.post('/file/upload', {schema}, async (req, res) => {
             const {uid} = req.session.token!;
 
 
@@ -106,4 +104,56 @@ export = async function(fastify: FastifyInstance) {
             res.status(200).send({url:`${Config.serve_at.url}/public/${newFilename}`});
         });
 	}
+    /** /api/file/excel **/
+    {
+        const schema = {
+			description: '產 excel 表',
+			summary: '產 excel 表',
+            body: {
+                type: 'object',
+                properties: {
+                    sid: { type: 'string'},
+                },
+                required: ['sid'],
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        //@ts-ignore
+		fastify.post<{Body:{sid:RoskaSerials['sid']}}>('/file/excel', {schema}, async (req, res) => {
+            const {uid} = req.session.token!;
+
+            
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('「「工作表1」預估」');
+
+            worksheet.eachRow
+            // Add data to the worksheet
+            worksheet.columns = [
+                { header: '', key: 'pay', width: 20 },
+                { header: '', key: 'gid', width: 20},
+                { header: '編號', key: 'no', width: 20 },
+                { header: '會組編號', key: 'sid', width: 30 },
+                { header: '姓名', key: 'name', width: 30 },
+                { header: '死活會', key: 'live_die', width: 30 },
+                { header: '死活會', key: 'live_die', width: 30 },
+            ];
+
+            const data = [
+                { name: 'John Doe', age: 30, country: 'USA' },
+                { name: 'Jane Doe', age: 25, country: 'Canada' },
+                { name: 'Bob Smith', age: 40, country: 'UK' },
+            ];
+
+            worksheet.addRows(data);
+
+            // Save the workbook to a file
+            await workbook.xlsx.writeFile('example.xlsx');
+
+            console.log('Excel file created successfully.');
+
+
+            res.status(200).send({});
+        });
+    }
 };

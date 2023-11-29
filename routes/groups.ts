@@ -46,10 +46,11 @@ export = async function(fastify: FastifyInstance) {
             
             const {uid} = req.session.token!;
             const {rows} = await Postgres.query<RoskaSerials>(`
-                SELECT s.*
+                SELECT m.mid, m.create_time as join_time, s.* 
                 FROM roska_members m
                 INNER JOIN roska_serials s ON m.sid = s.sid
-                WHERE m.uid=$1 GROUP BY m.sid, s.sid;`, [uid]);
+                WHERE m.uid=$1
+                ORDER BY m.mid ASC, m.sid ASC;`, [uid]);
 
             return res.status(200).send(rows);
         });

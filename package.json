@@ -26,6 +26,7 @@
     "colors": "^1.4.0",
     "copyfiles": "^2.4.1",
     "ejstmpl": "^0.9.1",
+    "exceljs": "^4.4.0",
     "extes": "^4.2.1",
     "fastify": "^4.18.0",
     "fastify-multer": "^2.0.3",
