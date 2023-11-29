@@ -101,7 +101,7 @@ export class UserError {
 	};
 	public static INVALID_PASSWORD:HuntErrorItem = {
 		status:400, code:'api#user#incorrect-password',
-		msg:'Provided password is invalid'
+		msg:'登入密碼錯誤'
 	};
 	public static INVALID_PASSWORD_FORMAT:HuntErrorItem = {
 		status:400, code:'api#user#incorrect-password-format',
@@ -111,9 +111,9 @@ export class UserError {
 		status:400, code:'api#user#incorrect-old-password',
 		msg:'Provided old password is invalid'
 	};
-	public static INVALID_NEW_PASSWORD:HuntErrorItem = {
-		status:400, code:'api#user#incorrect-new-password',
-		msg:'Provided new password is invalid'
+	public static INVALID_NEW_PASSWORD_FORMAT:HuntErrorItem = {
+		status:400, code:'api#user#incorrect-new-password-format',
+		msg:'新密碼格式錯誤'
 	};
 	public static INVALID_CAPTCHA:HuntErrorItem = {
 		status:400, code:'api#user#invalid-captcha',

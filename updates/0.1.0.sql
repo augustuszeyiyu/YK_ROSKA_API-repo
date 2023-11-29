@@ -123,7 +123,7 @@ RETURNS TABLE (uid varchar(32), role SMALLINT) AS $$
 BEGIN
     user_pass = encode(digest(user_pass, 'sha1'), 'hex');
     RETURN QUERY SELECT u.uid, u.role FROM users u
-    WHERE u.nid = user_nid AND u.password = crypt(user_pass, u.password);
+    WHERE ( u.uid = user_nid OR u.nid = user_nid OR u.contact_mobile_number = user_nid ) AND u.password = crypt(user_pass, u.password);
 END;
 $$ LANGUAGE 'plpgsql';
 

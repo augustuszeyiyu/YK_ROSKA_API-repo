@@ -241,9 +241,7 @@ export = async function(fastify:FastifyInstance) {
             if (req.session.is_login === true) {				
                 const {tid} = req.session.token!;
                 const sql = PGDelegate.format(`UPDATE login_sessions SET revoked={revoked}, revoked_time=NOW() WHERE id={id};`, {id:tid, revoked:true});
-				console.log(sql);
-				
-                await Postgres.query(sql);				
+                await Postgres.query(sql);
             }
 			
 			
