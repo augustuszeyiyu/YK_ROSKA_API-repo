@@ -7,6 +7,7 @@ import { BaseError } from "/lib/error.js";
 export = async function(fastify:FastifyInstance) {
 	fastify.register(async(fastify)=>{
 		fastify.register((await import('./auth-login-session.js')).default);
+		fastify.register((await import('./auth-password-forgot.js')).default);
 	});
 
 
@@ -22,7 +23,7 @@ export = async function(fastify:FastifyInstance) {
 
 
 
-		fastify.register((await import('./auth-password.js')).default);
+		fastify.register((await import('./auth-password-reset.js')).default);
 	});
 	
 }

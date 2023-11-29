@@ -19,21 +19,25 @@ import { User, isValidNewResidentID, isValidPassword, isValidTaiwanNationalID } 
 
 export = async function(fastify:FastifyInstance) {
     
-	/** GET /api/auth/password/change
-	 *	- 取得登入資訊
+	/** POST /api/auth/password/reset
+	 *	- 變更密碼
 	**/;
     {
         const schema = {
 			description: '變更密碼',
 			summary: '變更密碼',
 			body:{
-                old_passwrod: { type: 'string' },
-                new_passwrod: { type: 'string' },
+                type: 'object',
+				properties: {
+                    old_passwrod: { type: 'string' },
+                    new_passwrod: { type: 'string' },
+                },
+                required: ['old_passwrod', 'new_passwrod']
             },
 			security: [{ bearerAuth: [] }],
 		};
 
-		fastify.post<{Body:{old_passwrod:string, new_passwrod:string}}>('/password/change', {schema}, async(req, res)=>{
+		fastify.post<{Body:{old_passwrod:string, new_passwrod:string}}>('/password/reset', {schema}, async(req, res)=>{
             const {old_passwrod, new_passwrod} = req.body;
 			const {tid, uid, role} = req.session.token!;
 			
