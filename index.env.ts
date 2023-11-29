@@ -1,10 +1,11 @@
+import $ from "shared-storage";
 import fsp from "fs/promises";
 import path from "path";
 import Ajv from "ajv";
 import {Version} from "updator";
 import EJSTmpl from "ejstmpl";
 import reroot from 'reroot';
-import $ from "shared-storage";
+
 
 import Config from '/config.default.js';
 import ProjectInfo from "/package.json";
@@ -20,12 +21,15 @@ export default async function() {
 
 
 	console.log('Initialize image files directory...');
-	$.STORAGE_ROOT = path.resolve(reroot.project_root, Config.storage_root);
+	$.STORAGE_ROOT = path.resolve(Config.storage_root);
+	console.log($.STORAGE_ROOT);
+	
 
 	// Prepare storage directories
 	{
-		await fsp.mkdir(`${$.STORAGE_ROOT}/upload_cache`, {recursive:true});
-		await fsp.mkdir(`${$.STORAGE_ROOT}/files`, {recursive:true});
+		await fsp.mkdir( path.resolve(Config.storage_root), {recursive:true} );
+		await fsp.mkdir( path.resolve(Config.storage_root, 'upload_cache'), {recursive:true} );
+		await fsp.mkdir( path.resolve(Config.storage_root, 'files'), {recursive:true} );
 	}
 
 

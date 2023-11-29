@@ -12,8 +12,8 @@ export = async function(fastify: FastifyInstance) {
 	/** /api/version **/
 	{
 		const schema = {
-			description: '上傳檔案',
-			summary: '上傳檔案',
+			description: '上傳檔案，請用 postman 測試',
+			summary: '上傳檔案，請用 postman 測試',
             consumes: ['multipart/form-data'],
             formData: {
                 type: 'object',
@@ -51,14 +51,7 @@ export = async function(fastify: FastifyInstance) {
                 mimetype,
             } = data;
 
-            console.log({
-                file, 
-                fields,      
-                fieldname,
-                filename,
-                encoding,
-                mimetype,
-            });
+            console.log({ fieldname, filename, encoding, mimetype });
 
             
 
@@ -93,7 +86,7 @@ export = async function(fastify: FastifyInstance) {
             // Handle events on the write stream (optional)
             writeStream.on('error', (err) => {
                 console.error('Error writing file:', err);
-                res.errorHandler(BaseError.UNEXPECTED_SERVER_ERROR);
+                return res.errorHandler(BaseError.UNEXPECTED_SERVER_ERROR);
             });
 
             writeStream.on('finish', () => {
