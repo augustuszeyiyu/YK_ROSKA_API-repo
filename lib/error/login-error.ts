@@ -27,10 +27,6 @@ export class LoginError {
 		status:400, code:'api#login#repeat_sign_in_google',
 		msg:'Repeat sign in google in short time!'
 	};
-	public static INVALID_GOOGLE_TOTP:HuntErrorItem = {
-		status:400, code:'api#login#incorrect-google-totp',
-		msg:"Provided Google TOTP is invalid. If you don't have totp, please apply totp first."
-	};
 	public static SESSION_ID_REQUIRE:HuntErrorItem = {
 		status:400, code:'api#login#totp-required',
 		msg:'session id is missing! session id is required!'
@@ -46,5 +42,9 @@ export class LoginError {
 	public static INVALID_TOKEN:HuntErrorItem = {
 		status:400, code:'api#login#incorrect-token',
 		msg:"Provided token is invalid or not exists."
+	};
+	public static TOKEN_EXPIRED:HuntErrorItem = {
+		status:400, code:'api#login#token-expired',
+		msg:"Token 已過期，請重新請求。"
 	};
 };

@@ -49,7 +49,7 @@ export = async function(fastify:FastifyInstance) {
 				tid:  TrimId.NEW.toString(32),
 				uid:  user.uid,
 				iss:  'YK5-RESET-PASSWORD',
-				exp:   new Date(currentDate.getTime() + 5 * 60 * 1000).getTime()
+				exp:   Date.now() + (30 * 60 * 1000)
 			};
 
 			const token = BWT.GenBWT(TOKEN_INFO, Config.secret.session);
@@ -85,8 +85,13 @@ export = async function(fastify:FastifyInstance) {
 
 
 			const token_info = BWT.ParseBWT<RoskaSessToken>(token, Config.secret.session);
-			if (token_info === undefined) {
+			if (!token_info) {
 				return res.errorHandler(LoginError.INVALID_TOKEN);
+			}
+
+			const is_expired = token_info.exp < Date.now();
+			if (is_expired === true) {
+				return res.errorHandler(LoginError.TOKEN_EXPIRED);
 			}
 
 			await Postgres.query(`UPDATE users SET password = $1 WHERE uid=$2;`, [new_passwrod, token_info?.uid]);

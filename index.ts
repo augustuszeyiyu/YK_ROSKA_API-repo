@@ -158,7 +158,7 @@ Promise.chain(async()=>{
 			req.session = { source:'unkown', is_login:false };
 			
 			console.log(req.routerPath);
-			const whiteList = ['/api/register', '/api/auth/login', '/api/version', '/api/auth/password/forgot'];
+			const whiteList = ['/api/register', '/api/auth/login', '/api/version', '/api/auth/password/forgot', '/api/auth/password/forgot/reset'];
 			if (whiteList.includes(req.routerPath) === true)  return;
 
 
