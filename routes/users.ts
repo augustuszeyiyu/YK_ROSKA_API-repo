@@ -14,6 +14,7 @@ export = async function(fastify: FastifyInstance) {
 				type: 'object',
 				properties: {}
 			},
+			security: [{ bearerAuth: [] }],
 		};
 
 		fastify.get<{Reply:Object}>('/user', {schema}, async (req, res)=>{			
@@ -53,6 +54,7 @@ export = async function(fastify: FastifyInstance) {
 					emergency_contact_relation: { type: 'string' },
 				}
 			},
+			security: [{ bearerAuth: [] }],
 		};
 
 		fastify.post<{Body:Partial<User>, Reply:Object}>('/user', {schema}, async (req, res)=>{
@@ -148,6 +150,7 @@ export = async function(fastify: FastifyInstance) {
 					uid: { type: 'string' },
 				}
 			},
+			security: [{ bearerAuth: [] }],
 		};
 
 		fastify.delete<{Params:{uid:User['uid']}, Body:Partial<User>, Reply:Object}>('/user/:uid', {schema}, async (req, res)=>{		
