@@ -73,7 +73,6 @@ export = async function(fastify:FastifyInstance) {
                 },
                 required: ['token', 'new_passwrod']
             },
-			security: [{ bearerAuth: [] }],
 		};
 
 		fastify.post<{Body:{token:string, new_passwrod:string}}>('/password/forgot/reset', {schema}, async(req, res)=>{
@@ -89,7 +88,7 @@ export = async function(fastify:FastifyInstance) {
 			if (token_info === undefined) {
 				return res.errorHandler(LoginError.INVALID_TOKEN);
 			}
-			
+
 			await Postgres.query(`UPDATE users SET password = $1 WHERE uid=$2;`, [new_passwrod, token_info?.uid]);
 			await Postgres.query(`UPDATE login_sessions SET revoked=true, revoked_time=NOW() WHERE uid=$1;`, [token_info?.uid]);
             
