@@ -20,12 +20,12 @@ import { User, isValidNewResidentID, isValidPassword, isValidTaiwanNationalID } 
 export = async function(fastify:FastifyInstance) {
     
 	/** POST /api/auth/password/forgot
-	 *	- 變更密碼
+	 *	- 變更忘記密碼之前，檢查用戶身份
 	**/;
     {
         const schema = {
-			description: '變更密碼',
-			summary: '變更密碼',
+			description: '變更忘記密碼之前，檢查用戶身份',
+			summary: '變更忘記密碼之前，檢查用戶身份',
 			body:{
 				type: 'object',
 				properties: {
@@ -59,12 +59,12 @@ export = async function(fastify:FastifyInstance) {
 		});
 	}
 	/** POST /api/auth/password/forgot/reset
-	 *	- 變更密碼
+	 *	- 變更忘記密碼
 	**/;
     {
         const schema = {
-			description: '變更密碼',
-			summary: '變更密碼',
+			description: '變更忘記密碼',
+			summary: '變更忘記密碼',
 			body:{
                 type: 'object',
 				properties: {
