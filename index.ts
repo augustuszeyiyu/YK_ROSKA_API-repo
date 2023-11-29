@@ -109,7 +109,9 @@ Promise.chain(async()=>{
 	// multipart/form-data
 	.register((await import('@fastify/multipart')).default)
 	
-	.register((await import('@fastify/static')).default, {root:`/tmp/upload_cache`, prefix:'/file', decorateReply:true})
+	.register((await import('@fastify/static')).default, {
+		root: Config.storage_root, prefix:'/public/', decorateReply:true}
+	)
 
 	// .register((await import('@fastify/cors')).default, {
 	// 	origin: Config.serve_at.url, // Replace with your actual origin
@@ -157,7 +159,7 @@ Promise.chain(async()=>{
 		.addHook('preHandler', async(req, res) => {
 			req.session = { source:'unkown', is_login:false };
 			
-			console.log(req.routerPath);
+			console.log(req.routerPath, req.headers['authorization']);
 			const whiteList = ['/api/register', '/api/auth/login', '/api/version', '/api/auth/password/forgot', '/api/auth/password/forgot/reset'];
 			if (whiteList.includes(req.routerPath) === true)  return;
 
@@ -215,6 +217,7 @@ Promise.chain(async()=>{
 		.register((await import('/routes/register.js')).default,					{prefix:'/'})
 		.register((await import('/routes/users.js')).default,						{prefix:'/'})
 		.register((await import('/routes/groups.js')).default,						{prefix:'/'})
+		.register((await import('/routes/upload.js')).default,						{prefix:'/'})
 		.register((await import('/routes/auth/auth.js')).default,					{prefix:'/auth'})
 		.register((await import('/routes/admin/admin.js')).default,					{prefix:'/admin'})
 
