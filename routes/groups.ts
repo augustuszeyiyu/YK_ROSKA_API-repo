@@ -117,11 +117,11 @@ export = async function(fastify: FastifyInstance) {
             
             
             const total_members = Number(member_count.count);
-            if (roska_serial.cycles === total_members) {
+            if (roska_serial.member_count === total_members) {
                 return res.errorHandler(GroupError.GROUP_SERIAL_IS_FULL);
             }
 
-            const next = `${total_members + 1}`.padStart(2, '0');
+            const next = `${total_members}`.padStart(2, '0');
             const mid = `${sid}-${next}`;
            
             const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
