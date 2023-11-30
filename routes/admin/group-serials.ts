@@ -265,7 +265,31 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(row);
         });
     }
-    
+    /** 刪除會組序號 sid **/
+    {
+        const schema = {
+			description: '刪除會組序號 sid',
+			summary: '刪除會組序號 sid',
+            params: {
+                type: 'object',
+                properties:{
+                    sid: {type: 'string'}
+                },
+                required:["sid"],
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.delete<{Params:{sid:RoskaSerials['sid']}}>('/group-serial/:sid', {schema}, async (req, res)=>{
+            const {sid} = req.params;
+            
+            await Postgres.query<RoskaSerials>(`DELETE FROM roska_members WHERE sid=$1;`, [sid]);
+            await Postgres.query<RoskaSerials>(`DELETE FROM roska_groups  WHERE sid=$1;`, [sid]);
+            await Postgres.query<RoskaSerials>(`DELETE FROM roska_serials WHERE sid=$1;`, [sid]);
+
+            return res.status(200).send({});
+        });
+    }
 
     function generateNextSid(last_group_id:string) {
         let  currentPrefix = last_group_id.substring(1,2);
@@ -284,6 +308,7 @@ export = async function(fastify: FastifyInstance) {
         console.log(sid);
         return sid;
     }
+    
 
     function generateNextGid(sid:string, start_date:string) {
        const new_date = getPreviousWeekday( start_date );
