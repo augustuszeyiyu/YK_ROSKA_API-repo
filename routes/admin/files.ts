@@ -156,32 +156,30 @@ export = async function(fastify: FastifyInstance) {
 		fastify.post<{Body:{sid:RoskaSerials['sid']}}>('/file/excel', {schema}, async (req, res) => {
             const {uid} = req.session.token!;
 
-            
+            const {sid} = req.body;
+            const {rows:roska_members} = await Postgres.query(`SELECT * FROM roska_members WHERE sid=$1`, [sid]);
+
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('「「工作表1」預估」');
 
             worksheet.eachRow
             // Add data to the worksheet
             worksheet.columns = [
-                { header: '', key: 'pay', width: 20 },
-                { header: '', key: 'gid', width: 20},
-                { header: '編號', key: 'no', width: 20 },
-                { header: '會組編號', key: 'sid', width: 30 },
-                { header: '姓名', key: 'name', width: 30 },
-                { header: '死活會', key: 'live_die', width: 30 },
-                { header: '死活會', key: 'live_die', width: 30 },
+                { header: '',       key: 'pay',     width: 10 },
+                { header: '',       key: 'gid',     width: 10 },
+                { header: '編號',    key: 'c0',      width: 20 },
             ];
 
             const data = [
-                { name: 'John Doe', age: 30, country: 'USA' },
-                { name: 'Jane Doe', age: 25, country: 'Canada' },
-                { name: 'Bob Smith', age: 40, country: 'UK' },
+                { pay: '', gid: '', c0: '編號',  c1:'1', c2:'2' },
+                { pay: '', gid: '', c0: '會組編號',  c1:'1', c2:'2' },
+                { pay: '', gid: '', c0: '姓名',  c1:'1', c2:'2' },
             ];
 
             worksheet.addRows(data);
 
             // Save the workbook to a file
-            await workbook.xlsx.writeFile('example.xlsx');
+            await workbook.xlsx.writeFile('./example.xlsx');
 
             console.log('Excel file created successfully.');
 
