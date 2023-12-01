@@ -155,7 +155,7 @@ export = async function(fastify: FastifyInstance) {
             const {rows} = await Postgres.query(
                 `SELECT m.mid, m.sid, u.uid, u.name, m.gid
                 FROM roska_members m 
-                LEFT JOIN users u ON m.uid=u.uid
+                INNER JOIN users u ON m.uid=u.uid
                 WHERE m.sid=$1
                 ORDER BY m.mid ASC;`,[sid]);
 
