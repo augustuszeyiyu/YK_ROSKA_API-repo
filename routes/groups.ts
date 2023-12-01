@@ -142,23 +142,22 @@ export = async function(fastify: FastifyInstance) {
                 description: '搜尋該團下的成員',
                 type: 'object',
 				properties: {
-                    gid: { type: 'string' }
+                    sid: { type: 'string' }
                 },
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/group/member/:sid', {schema}, async (req, res)=>{
             const {uid}:{uid:User['uid']} = req.session.token!;
-            const {gid} = req.params;
+            const {sid} = req.params;
 
             const {rows} = await Postgres.query(
-                `SELECT m.mid, m.gid, u.uid, u.contact_mobile_number, u.address
-                FROM roska_groups g
-                INNER JOIN roska_members m ON g.gid=m=gid
+                `SELECT m.mid, m.sid, u.uid, u.name, m.gid
+                FROM roska_members m 
                 LEFT JOIN users u ON m.uid=u.uid
-                WHERE g.gid=$1
-                ORDER BY m.mid ASC;`,[gid]);
+                WHERE m.sid=$1
+                ORDER BY m.mid ASC;`,[sid]);
 
             return res.status(200).send(rows);
         });
