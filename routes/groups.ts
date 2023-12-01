@@ -134,35 +134,35 @@ export = async function(fastify: FastifyInstance) {
 		});
     }
 
-    // {
-    //     const schema = {
-	// 		description: '搜尋該團下的成員',
-	// 		summary: '搜尋該團下的成員',
-    //         params: {
-    //             description: '搜尋該團下的成員',
-    //             type: 'object',
-	// 			properties: {
-    //                 gid: { type: 'string' }
-    //             },
-    //         },
-    //         security: [{ bearerAuth: [] }],
-	// 	};
+    {
+        const schema = {
+			description: '搜尋該團下的成員',
+			summary: '搜尋該團下的成員',
+            params: {
+                description: '搜尋該團下的成員',
+                type: 'object',
+				properties: {
+                    gid: { type: 'string' }
+                },
+            },
+            security: [{ bearerAuth: [] }],
+		};
 
-    //     fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
-    //         const {uid}:{uid:User['uid']} = req.session.token!;
-    //         const {gid} = req.params;
+        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group:/gid', {schema}, async (req, res)=>{
+            const {uid}:{uid:User['uid']} = req.session.token!;
+            const {gid} = req.params;
 
-    //         const {rows} = await Postgres.query(
-    //             `SELECT m.mid, m.gid, u.uid, u.contact_mobile_number, u.address
-    //             FROM roska_groups g
-    //             INNER JOIN roska_members m ON g.gid=m=gid
-    //             LEFT JOIN users u ON m.uid=u.uid
-    //             WHERE g.gid=$1
-    //             ORDER BY m.mid ASC;`,[gid]);
+            const {rows} = await Postgres.query(
+                `SELECT m.mid, m.gid, u.uid, u.contact_mobile_number, u.address
+                FROM roska_groups g
+                INNER JOIN roska_members m ON g.gid=m=gid
+                LEFT JOIN users u ON m.uid=u.uid
+                WHERE g.gid=$1
+                ORDER BY m.mid ASC;`,[gid]);
 
-    //         return res.status(200).send(rows);
-    //     });
-    // } 
+            return res.status(200).send(rows);
+        });
+    } 
 
     {
         const schema = {
