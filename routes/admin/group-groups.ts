@@ -6,142 +6,12 @@ import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
 import { BaseError } from "/lib/error";
-import { INT_POSSITIVE_STR_FORMAT } from "/data-type/common-helpers";
+import { INT_POSSITIVE_STR_FORMAT, SORT_ORDER } from "/data-type/common-helpers";
 import { GroupError } from "/lib/error/gruop-error";
 
 
 export = async function(fastify: FastifyInstance) {
-    /** 會組 gid 列表 **/
-    {
-        const schema_query = {
-            type: 'object',
-            properties:{
-                order:  { type: 'string' },
-                p:      { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
-                ps:     { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
-            },
-            required:['order', 'p', 'ps'],
-        };
-        const schema = {
-			description: '會組 gid 列表',
-			summary: '會組 gid 列表',
-            querystring: Object.assign(
-                schema_query, 
-                {examples:[
-                    { order:'ASC', p:'1', ps:'10' },
-                    { order:'DESC', p:'2', ps:'10' }
-                ]}
-            ),
-            security: [{ bearerAuth: [] }],
-		};
-        const PayloadValidator = $.ajv.compile(schema_query);
-        type PaginateCursorUser = PaginateCursor<RoskaGroups[]>;
-        fastify.get<{Querystring:{order:'ASC'|'DESC', p:string, ps:string}}>('/group/group', {schema}, async (req, res)=>{
-            if ( !PayloadValidator(req.query) ) {
-                return res.status(400).send({
-                    scope:req.routerPath,
-                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
-                    msg: "Request payload is invalid!",
-                    detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
-                });
-            }
-
-
-            const {uid, role}= req.session.token!;
-
-            const {order, p, ps} = req.query;
-			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
-			const _PageSize = !ps? 30 : (ps && parseInt(ps)<30? 30: (ps && parseInt(ps) > 150 ? 150 : parseInt(ps)));
-  			const _PageOffset = ((_PageNumber-1) * _PageSize);
-
-            
-
-			let sql_count = `SELECT COUNT(*) FROM roska_groups;`;
-			let sql = `SELECT * FROM roska_groups ORDER BY gid ${order} `;
-			const val:any[] = [];
-
-
-
-			const result:PaginateCursorUser = {
-				records: [],
-				meta: {
-					page: _PageNumber,
-					page_size: _PageSize,
-					total_records: 0,
-					total_pages: 0
-				}
-			};
-			
-
-
-            const {rows} = await Postgres.query(sql_count); 
-			let total_records = 0;
-            if (Number(rows[0].count) > 0) {
-                total_records = Number(rows[0].count);
-            }
-            else {
-                return res.status(200).send(result);
-            }
-
-
-			{
-				val.push(_PageOffset);
-				sql += ` OFFSET $${val.length} `;
-			}
-			
-
-			{
-				val.push(_PageSize);
-				sql += ` FETCH NEXT $${val.length} ROWS ONLY;`;
-			}
-
-
-			console.log(sql, val);
-			
-					
-            const {rows:records} = await Postgres.query(sql, val);
-            result.records = records;
-            result.meta.total_records = total_records;
-            result.meta.total_pages = Math.ceil(total_records / _PageSize);
-			
-
-            res.status(200).send(result); 
-        });
-    }
-
-    /**  會組序號 sid 下的 會組 gid 列表 **/
-    {
-        const schema = {
-			description: '會組序號 sid 下的 會組 gid 列表',
-			summary: '會組序號 sid 下的 會組 gid 列表',
-            params: {
-                type: 'object',
-                properties:{
-                    sid: {type: 'string'}
-                },
-                required:["sid"],
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
-            const {uid, role} = req.session.token!;
-
-
-            const {sid} = req.params;
-            const {rows} = await Postgres.query(`
-                SELECT g.*, s.member_count, s.basic_unit_amount, s.min_bid_amount, s.max_bid_amount, s.bid_unit_spacing, s.frequency
-                FROM roska_groups g
-                LEFT JOIN roska_serials s ON s.sid = g.sid
-                WHERE g.sid=$1;
-            `, [sid]);
-            
-            return res.status(200).send(rows); 
-        });
-    }
-	
-    
-    /** 產每期會組編號 **/
+     /** 產會期編號 **/
 	{
         const schema_params = {
             type: 'object',
@@ -150,8 +20,8 @@ export = async function(fastify: FastifyInstance) {
             } 
         };
         const schema = {
-			description: '產每期會組編號',
-			summary: '產每期會組編號',
+			description: '產會期編號',
+			summary: '產會期編號',
             params: schema_params,
             security: [{ bearerAuth: [] }],
 		};
@@ -219,56 +89,143 @@ export = async function(fastify: FastifyInstance) {
 			res.status(200).send({});
 		});
 	}
+    /** 全部會期 gid 列表 **/
+    {
+        const schema_query = {
+            type: 'object',
+            properties:{
+                o:  { type: 'string', pattern: SORT_ORDER.source },
+                p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+                ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+            },
+            required:['o', 'p', 'ps'],
+        };
+        const schema = {
+			description: '全部會期 gid 列表',
+			summary: '全部會期 gid 列表',
+            querystring: Object.assign(
+                schema_query, 
+                {examples:[
+                    { order:'ASC', p:'1', ps:'10' },
+                    { order:'DESC', p:'2', ps:'10' }
+                ]}
+            ),
+            security: [{ bearerAuth: [] }],
+		};
+        const PayloadValidator = $.ajv.compile(schema_query);
+        type PaginateCursorUser = PaginateCursor<RoskaGroups[]>;
+        fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/group/all-list', {schema}, async (req, res)=>{
+            if ( !PayloadValidator(req.query) ) {
+                return res.status(400).send({
+                    scope:req.routerPath,
+                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                    msg: "Request payload is invalid!",
+                    detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+                });
+            }
 
+
+            const {o, p, ps} = req.query;
+            const _order = o.trim().toUpperCase();
+			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
+			const _PageSize = !ps? 30 : (ps && parseInt(ps)<30? 30: (ps && parseInt(ps) > 150 ? 150 : parseInt(ps)));
+  			const _PageOffset = ((_PageNumber-1) * _PageSize);
+
+            
+
+			let sql_count = `SELECT COUNT(*) FROM roska_groups;`;
+			let sql = `
+                SELECT  *, 
+                        (CASE
+                            WHEN bid_start_time > NOW() THEN '尚未開始'
+                            WHEN bid_end_time >= NOW() AND NOW() >= bid_start_time THEN '進行中'
+                            WHEN NOW() > bid_end_time THEN '已過期'
+                        END) as state
+                FROM roska_groups ORDER BY gid ${_order} `;
+			const val:any[] = [];
+
+
+
+			const result:PaginateCursorUser = {
+				records: [],
+				meta: {
+					page: _PageNumber,
+					page_size: _PageSize,
+					total_records: 0,
+					total_pages: 0
+				}
+			};
+			
+
+
+            const {rows} = await Postgres.query(sql_count); 
+			let total_records = 0;
+            if (Number(rows[0].count) > 0) {
+                total_records = Number(rows[0].count);
+            }
+            else {
+                return res.status(200).send(result);
+            }
+
+
+			{
+				val.push(_PageOffset);
+				sql += ` OFFSET $${val.length} `;
+			}
+			
+
+			{
+				val.push(_PageSize);
+				sql += ` FETCH NEXT $${val.length} ROWS ONLY;`;
+			}
+
+
+			console.log(sql, val);
+			
+					
+            const {rows:records} = await Postgres.query(sql, val);
+            result.records = records;
+            result.meta.total_records = total_records;
+            result.meta.total_pages = Math.ceil(total_records / _PageSize);
+			
+
+            res.status(200).send(result); 
+        });
+    }
+
+    /**  會組序號 sid 下的 會組 gid 列表 **/
     {
         const schema = {
-			description: '新增會員入會',
-			summary: '新增會員入會',
-            body: {
+			description: '會組序號 sid 下的 會組 gid 列表',
+			summary: '會組序號 sid 下的 會組 gid 列表',
+            params: {
                 type: 'object',
-				properties: {
-                    uid: { type: 'string' },
-                    sid: { type: 'string' }
+                properties:{
+                    sid: {type: 'string'}
                 },
-                required: ['uid', 'sid']
+                required:["sid"],
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{uid:User['uid'], sid:RoskaSerials['sid']}}>('/group/group/member', {schema}, async (req, res)=>{
-            const {uid, sid} = req.body;
+        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/group/list/:sid', {schema}, async (req, res)=>{
 
-
-            const {rows: [roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
-            if (roska_serial === undefined) {
-                return res.errorHandler(GroupError.SID_NOT_FOUND);
-            }
-
-
-            const {rows: [member_count]} = await Postgres.query<{count:num_str}>(`
-                SELECT COALESCE(COUNT(m.mid), 0) AS count
-                FROM roska_members m
-                LEFT JOIN roska_serials s ON m.sid = s.sid
-                WHERE m.sid = $1;`, [sid]);
+            const {sid} = req.params;
+            const {rows} = await Postgres.query(`
+                SELECT g.*, s.member_count, s.basic_unit_amount, s.min_bid_amount, s.max_bid_amount, s.bid_unit_spacing, s.frequency,
+                    (CASE
+                        WHEN g.bid_start_time > NOW() THEN '尚未開始'
+                        WHEN g.bid_end_time >= NOW() AND NOW() >= g.bid_start_time THEN '進行中'
+                        WHEN NOW() > g.bid_end_time THEN '已過期'
+                    END) as state
+                FROM roska_groups g
+                LEFT JOIN roska_serials s ON s.sid = g.sid
+                WHERE g.sid=$1
+                ORDER BY g.gid, g.sid;
+            `, [sid]);
             
-            
-            const total_members = Number(member_count.count);
-            if (roska_serial.member_count === total_members) {
-                return res.errorHandler(GroupError.GROUP_SERIAL_IS_FULL);
-            }
-
-            
-            const next = `${total_members}`.padStart(2, '0');
-            const mid = `${sid}-${next}`;
-           
-            const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
-    
-            await Postgres.query(sql);
-
-          
-            
-			res.status(200).send({});
-		});
+            return res.status(200).send(rows); 
+        });
     }
 
     {

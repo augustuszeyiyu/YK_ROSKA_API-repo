@@ -1,13 +1,15 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { GroupFrequency, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
+import { GroupFrequency, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
 import { BaseError } from "/lib/error";
-import { GenWhiteListPattern, INT_POSSITIVE_STR_FORMAT } from "/data-type/common-helpers";
+import { GenWhiteListPattern, INT_POSSITIVE_STR_FORMAT, SORT_ORDER } from "/data-type/common-helpers";
 
+
+type PaginateCursorUser = PaginateCursor<RoskaSerials[]>;
 
 export = async function(fastify: FastifyInstance) {
     /** 產會組序號 sid **/
@@ -139,38 +141,32 @@ export = async function(fastify: FastifyInstance) {
 			res.status(200).send({sid})
 		});
     }
-    /** 會組序號 sid 列表 **/
+    /** 新成立會組列表 **/
     {
-        const schema = {
-			description: '會組序號 sid 列表',
-			summary: '會組序號 sid 列表',
-            querystring: {
-                type: 'object',
-                properties:{
-                    order:  { type: 'string' },
-                    p:      { type: 'string' },
-                    ps:     { type: 'string' },
-                },
-                required:['order', 'p', 'ps'],
-                examples:[
-                    { order:'ASC', p:'1', ps:'10' },
-                    { order:'DESC', p:'2', ps:'10' }
-                ]
-            },
-            security: [{ bearerAuth: [] }],
-		};
         const schema_query = {
             type: 'object',
             properties:{
-                order:  { type: 'string' },
-                p:      { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
-                ps:     { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+                o:  { type: 'string', pattern: SORT_ORDER.source },
+                p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+                ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
-            required:['order', 'p', 'ps'],
+            required:['o', 'p', 'ps'],
         };
+        const schema = {
+			description: '新成立會組列表',
+			summary: '新成立會組列表',
+            querystring: Object.assign(schema_query, {
+                examples:
+                [
+                    { o:'ASC', p:'1', ps:'10' },
+                    { o:'DESC', p:'2', ps:'10' }
+                ]
+            }),
+            security: [{ bearerAuth: [] }],
+		};
+
         const PayloadValidator = $.ajv.compile(schema_query);
-		type PaginateCursorUser = PaginateCursor<RoskaSerials[]>;
-        fastify.get<{Querystring:{order:'ASC'|'DESC', p:string, ps:string}}>('/group/serial', {schema}, async (req, res)=>{
+        fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/new-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
@@ -180,9 +176,314 @@ export = async function(fastify: FastifyInstance) {
                 });
             }
 
-            const {uid, role}= req.session.token!;
+            const {o, p, ps} = req.query;
+            const _order = o.toUpperCase();
+			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
+			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
+  			const _PageOffset = ((_PageNumber-1) * _PageSize);
 
-            const {order, p, ps} = req.query;
+            
+            let sql_count = `
+                SELECT COUNT(*) FROM roska_serials 
+                WHERE bid_start_time > NOW();`;
+            let sql = `
+                SELECT * FROM roska_serials 
+                WHERE bid_start_time > NOW()
+                ORDER BY sid ${_order} `;
+            const val:any[] = [];
+  
+  
+  
+            const result:PaginateCursorUser = {
+                records: [],
+                meta: {
+                    page: _PageNumber,
+                    page_size: _PageSize,
+                    total_records: 0,
+                    total_pages: 0
+                }
+            };
+              
+  
+  
+            const {rows:[get_count]} = await Postgres.query<{count:num_str}>(sql_count); 
+            let total_records = 0;
+            if (Number(get_count.count) > 0) {
+                total_records = Number(get_count.count);
+            }
+            else {
+                return res.status(200).send(result);
+            };
+
+
+            {
+                val.push(_PageOffset);
+                sql += ` OFFSET $${val.length} `;
+            }
+            
+
+            {
+                val.push(_PageSize);
+                sql += ` FETCH NEXT $${val.length} ROWS ONLY;`;
+            }
+
+
+            console.log(sql, val);
+            
+                    
+            const {rows:records} = await Postgres.query(sql, val);
+            result.records = records;
+            result.meta.total_records = total_records;
+            result.meta.total_pages = Math.ceil(total_records / _PageSize);
+            
+
+            res.status(200).send(result);
+              
+        });
+    }
+    /** 進行中會組列表 **/
+    {
+        const schema_query = {
+            type: 'object',
+            properties:{
+                o:  { type: 'string', pattern: SORT_ORDER.source },
+                p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+                ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+            },
+            required:['o', 'p', 'ps'],
+        };
+        const schema = {
+			description: '進行中會組列表',
+			summary: '進行中會組列表',
+            querystring: Object.assign(schema_query, {
+                examples:
+                [
+                    { o:'ASC', p:'1', ps:'10' },
+                    { o:'DESC', p:'2', ps:'10' }
+                ]
+            }),
+            security: [{ bearerAuth: [] }],
+		};
+
+        const PayloadValidator = $.ajv.compile(schema_query);
+        fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/on-list', {schema}, async (req, res)=>{
+            if ( !PayloadValidator(req.query) ) {
+                return res.status(400).send({
+                    scope:req.routerPath,
+                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                    msg: "Request payload is invalid!",
+                    detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+                });
+            }
+
+            const {o, p, ps} = req.query;
+            const _order = o.trim().toUpperCase();
+			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
+			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
+  			const _PageOffset = ((_PageNumber-1) * _PageSize);
+
+            
+            let sql_count = `
+                SELECT COUNT(*) FROM roska_serials 
+                WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time;`;
+            let sql = `
+                SELECT * FROM roska_serials 
+                WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time
+                ORDER BY sid ${_order} `;
+            const val:any[] = [];
+  
+  
+  
+            const result:PaginateCursorUser = {
+                records: [],
+                meta: {
+                    page: _PageNumber,
+                    page_size: _PageSize,
+                    total_records: 0,
+                    total_pages: 0
+                }
+            };
+              
+  
+  
+            const {rows:[get_count]} = await Postgres.query<{count:num_str}>(sql_count); 
+            let total_records = 0;
+            if (Number(get_count.count) > 0) {
+                total_records = Number(get_count.count);
+            }
+            else {
+                return res.status(200).send(result);
+            };
+
+
+            {
+                val.push(_PageOffset);
+                sql += ` OFFSET $${val.length} `;
+            }
+            
+
+            {
+                val.push(_PageSize);
+                sql += ` FETCH NEXT $${val.length} ROWS ONLY;`;
+            }
+
+
+            console.log(sql, val);
+            
+                    
+            const {rows:records} = await Postgres.query(sql, val);
+            result.records = records;
+            result.meta.total_records = total_records;
+            result.meta.total_pages = Math.ceil(total_records / _PageSize);
+            
+
+            res.status(200).send(result);
+              
+        });
+    }
+    /** 已過期會組列表 **/
+    {
+        const schema_query = {
+            type: 'object',
+            properties:{
+                o:  { type: 'string', pattern: SORT_ORDER.source },
+                p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+                ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+            },
+            required:['o', 'p', 'ps'],
+        };
+        const schema = {
+			description: '已過期會組列表',
+			summary: '已過期會組列表',
+            querystring: Object.assign(schema_query, {
+                examples:
+                [
+                    { o:'ASC', p:'1', ps:'10' },
+                    { o:'DESC', p:'2', ps:'10' }
+                ]
+            }),
+            security: [{ bearerAuth: [] }],
+		};
+
+        const PayloadValidator = $.ajv.compile(schema_query);
+        fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/past-list', {schema}, async (req, res)=>{
+            if ( !PayloadValidator(req.query) ) {
+                return res.status(400).send({
+                    scope:req.routerPath,
+                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                    msg: "Request payload is invalid!",
+                    detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+                });
+            }
+
+            const {o, p, ps} = req.query;
+            const _order = o.trim().toUpperCase();
+			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
+			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
+  			const _PageOffset = ((_PageNumber-1) * _PageSize);
+
+            
+            let sql_count = `
+                SELECT COUNT(*) FROM roska_serials 
+                WHERE NOW() > bid_end_time;`;
+            let sql = `
+                SELECT * FROM roska_serials 
+                WHERE NOW() > bid_end_time
+                ORDER BY sid ${_order} `;
+            const val:any[] = [];
+  
+  
+  
+            const result:PaginateCursorUser = {
+                records: [],
+                meta: {
+                    page: _PageNumber,
+                    page_size: _PageSize,
+                    total_records: 0,
+                    total_pages: 0
+                }
+            };
+              
+  
+  
+            const {rows:[get_count]} = await Postgres.query<{count:num_str}>(sql_count); 
+            let total_records = 0;
+            if (Number(get_count.count) > 0) {
+                total_records = Number(get_count.count);
+            }
+            else {
+                return res.status(200).send(result);
+            };
+
+
+            {
+                val.push(_PageOffset);
+                sql += ` OFFSET $${val.length} `;
+            }
+            
+
+            {
+                val.push(_PageSize);
+                sql += ` FETCH NEXT $${val.length} ROWS ONLY;`;
+            }
+
+
+            console.log(sql, val);
+            
+                    
+            const {rows:records} = await Postgres.query(sql, val);
+            result.records = records;
+            result.meta.total_records = total_records;
+            result.meta.total_pages = Math.ceil(total_records / _PageSize);
+            
+
+            res.status(200).send(result);
+              
+        });
+    }
+    /** 全部會組序號 sid 列表 **/
+    {
+        const schema = {
+			description: '全部會組序號 sid 列表',
+			summary: '全部會組序號 sid 列表',
+            querystring: {
+                type: 'object',
+                properties:{
+                    o:  { type: 'string' },
+                    p:      { type: 'string' },
+                    ps:     { type: 'string' },
+                },
+                required:['o', 'p', 'ps'],
+                examples:[
+                    { o:'ASC', p:'1', ps:'10' },
+                    { o:'DESC', p:'2', ps:'10' }
+                ]
+            },
+            security: [{ bearerAuth: [] }],
+		};
+        const schema_query = {
+            type: 'object',
+            properties:{
+                o:  { type: 'string', pattern: SORT_ORDER.source },
+                p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+                ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
+            },
+            required:['o', 'p', 'ps'],
+        };
+        const PayloadValidator = $.ajv.compile(schema_query);
+		
+        fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/all-list', {schema}, async (req, res)=>{
+            if ( !PayloadValidator(req.query) ) {
+                return res.status(400).send({
+                    scope:req.routerPath,
+                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                    msg: "Request payload is invalid!",
+                    detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+                });
+            }
+
+            const {o, p, ps} = req.query;
+            const _order = o.trim().toUpperCase();
 			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
 			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
   			const _PageOffset = ((_PageNumber-1) * _PageSize);
@@ -190,7 +491,15 @@ export = async function(fastify: FastifyInstance) {
             
 
 			let sql_count = `SELECT COUNT(*) FROM roska_serials;`;
-			let sql = `SELECT * FROM roska_serials ORDER BY sid ${order.toUpperCase()} `;
+			let sql = `
+                SELECT *,
+                    (CASE
+                        WHEN bid_start_time > NOW() THEN '尚未開始'
+                        WHEN bid_end_time >= NOW() AND NOW() >= bid_start_time THEN '進行中'
+                        WHEN NOW() > bid_end_time THEN '已過期'
+                    END) as state
+                FROM roska_serials 
+                ORDER BY sid ${_order} `;
 			const val:any[] = [];
 
 
@@ -257,7 +566,6 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/group/serial/:sid', {schema}, async (req, res)=>{
-            const {uid, role} = req.session.token!;
 
             const {sid} = req.params;
             const {rows:[row]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
@@ -265,6 +573,30 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(row);
         });
     }
+    /** 會組序號 sid下的會員列表 **/
+    {
+        const schema = {
+			description: '搜搜尋會組序號 sid',
+			summary: '搜尋會組序號 sid',
+            params: {
+                type: 'object',
+                properties:{
+                    sid: {type: 'string'}
+                },
+                required:["sid"],
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.get<{Params:{sid:RoskaMembers['sid']}}>('/group/members/:sid', {schema}, async (req, res)=>{
+
+            const {sid} = req.params;
+            const {rows} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE sid=$1 ORDER BY mid ASC;`, [sid]);
+
+            return res.status(200).send(rows);
+        });
+    }
+    
     /** 刪除會組序號 sid **/
     {
         const schema = {

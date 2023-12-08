@@ -11,7 +11,7 @@ export const STR_LETTER_NUMBER_FORMAT = /^[A-Za-z0-9]*$/;
 export const STR_NUMBER_FORMAT = /^[0-9]*$/;
 
 export const MAX_INTEGER_32 = 0x7FFFFFFF;
-
+export const SORT_ORDER = /^(ASC|DESC)$/;
 
 
 function RegExpEscape(str:string):string {
