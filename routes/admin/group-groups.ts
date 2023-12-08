@@ -36,7 +36,7 @@ export = async function(fastify: FastifyInstance) {
 		};
         const PayloadValidator = $.ajv.compile(schema_query);
         type PaginateCursorUser = PaginateCursor<RoskaGroups[]>;
-        fastify.get<{Querystring:{order:'ASC'|'DESC', p:string, ps:string}}>('/group-groups', {schema}, async (req, res)=>{
+        fastify.get<{Querystring:{order:'ASC'|'DESC', p:string, ps:string}}>('/group/group', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
@@ -124,7 +124,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group-groups/:sid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
             const {uid, role} = req.session.token!;
 
 
@@ -157,7 +157,7 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         const PayloadValidator1 = $.ajv.compile(schema_params);
-		fastify.post<{Params:{sid:RoskaGroups['sid']}}>('/group-groups/:sid', {schema}, async (req, res)=>{
+		fastify.post<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
             if ( !PayloadValidator1(req.params) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
@@ -235,7 +235,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{uid:User['uid'], sid:RoskaSerials['sid']}}>('/group-groups/member', {schema}, async (req, res)=>{
+        fastify.post<{Body:{uid:User['uid'], sid:RoskaSerials['sid']}}>('/group/group/member', {schema}, async (req, res)=>{
             const {uid, sid} = req.body;
 
 

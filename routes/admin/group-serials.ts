@@ -50,7 +50,7 @@ export = async function(fastify: FastifyInstance) {
 
        
         const PayloadValidator = $.ajv.compile(schema_body);
-		fastify.post<{Body:RoskaSerialsRequiredInfo}>('/group-serial', {schema}, async (req, res)=>{
+		fastify.post<{Body:RoskaSerialsRequiredInfo}>('/group/serial', {schema}, async (req, res)=>{
             console.log(req.body);
             
             if ( !PayloadValidator(req.body) ) {
@@ -170,7 +170,7 @@ export = async function(fastify: FastifyInstance) {
         };
         const PayloadValidator = $.ajv.compile(schema_query);
 		type PaginateCursorUser = PaginateCursor<RoskaSerials[]>;
-        fastify.get<{Querystring:{order:'ASC'|'DESC', p:string, ps:string}}>('/group-serial', {schema}, async (req, res)=>{
+        fastify.get<{Querystring:{order:'ASC'|'DESC', p:string, ps:string}}>('/group/serial', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
@@ -256,7 +256,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/group-serial/:sid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/group/serial/:sid', {schema}, async (req, res)=>{
             const {uid, role} = req.session.token!;
 
             const {sid} = req.params;
@@ -280,7 +280,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.delete<{Params:{sid:RoskaSerials['sid']}}>('/group-serial/:sid', {schema}, async (req, res)=>{
+        fastify.delete<{Params:{sid:RoskaSerials['sid']}}>('/group/serial/:sid', {schema}, async (req, res)=>{
             const {sid} = req.params;
             
             await Postgres.query<RoskaSerials>(`DELETE FROM roska_bids    WHERE sid=$1;`, [sid]);
