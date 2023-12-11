@@ -11,9 +11,10 @@ import { User } from '/data-type/users';
 import { MAX_FILE_SIZE_BYTES } from '/lib/constants';
 
 import Config from '/config.default.js';
+import { SysVar } from '/data-type/sysvar';
 
 export = async function(fastify: FastifyInstance) {
-	/** /api/file/upload **/
+	/** 系統設定檔列表 **/
 	{
 		const schema = {
 			description: '系統設定檔列表',
@@ -34,12 +35,12 @@ export = async function(fastify: FastifyInstance) {
 
         //@ts-ignore
 		fastify.get('/sysvar', {schema}, async (req, res) => {
-            const {rows} = await Postgres.query(`SELECT * FROM sysvar ORDER by key ASC;`);
+            const {rows:[row]} = await Postgres.query<{jsonb_object_agg:object}>(`SELECT jsonb_object_agg(key, value) FROM sysvar;`);
             
-            res.status(200).send(rows);
+            res.status(200).send(row.jsonb_object_agg);
         });
 	}
-    /** /api/file/excel **/
+    /** 修改系統設定檔 **/
     {
         const schema = {
 			description: '修改系統設定檔',
@@ -84,8 +85,8 @@ export = async function(fastify: FastifyInstance) {
 
             const sql_list:string[] = [];
             for (const key in updaet_data) {
-                const value = updaet_data[key];
-                
+                const value = JSON.stringify(updaet_data[key]);
+
                 const sql = PGDelegate.format(`
                     INSERT INTO sysvar(key, value) 
                     VALUES ({key}, {value})
