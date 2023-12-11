@@ -82,7 +82,12 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Params:{sid:RoskaMembers['sid']}}>('/group/members/all-list/:sid', {schema}, async (req, res)=>{
 
             const {sid} = req.params;
-            const {rows} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE sid=$1 ORDER BY mid ASC;`, [sid]);
+            const {rows} = await Postgres.query<RoskaMembers>(`
+                SELECT m.*, u.name
+                FROM roska_members m
+                INNER JOIN users u ON m.uid = u.uid
+                WHERE sid=$1 
+                ORDER BY mid ASC;`, [sid]);
 
             return res.status(200).send(rows);
         });
