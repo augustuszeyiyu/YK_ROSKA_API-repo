@@ -76,7 +76,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{sid:RoskaMembers['sid']}}>('/group/members/all-list/:sid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{sid:RoskaMembers['sid']}}>('/group/member/all-list/:sid', {schema}, async (req, res)=>{
 
             const {sid} = req.params;
             const {rows} = await Postgres.query<RoskaMembers>(`
