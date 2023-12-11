@@ -80,7 +80,7 @@ export = async function(fastify: FastifyInstance) {
 
             const {sid} = req.params;
             const {rows} = await Postgres.query<RoskaMembers>(`
-                SELECT m.*, u.name
+                SELECT m.*, u.name||RIGHT(mid, 3) as name
                 FROM roska_members m
                 INNER JOIN users u ON m.uid = u.uid
                 WHERE sid=$1 
