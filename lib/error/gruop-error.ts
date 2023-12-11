@@ -24,4 +24,8 @@ export class GroupError {
 		status:400, code:'api#gruop#no-member-bid',
 		msg:'無人下標'
 	};
+	public static DUPLICATE_BID:HuntErrorItem = {
+		status:400, code:'api#gruop#duplicate-bid',
+		msg:'重複下標'
+	};
 };

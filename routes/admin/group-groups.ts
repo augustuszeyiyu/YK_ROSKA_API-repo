@@ -275,9 +275,15 @@ export = async function(fastify: FastifyInstance) {
         };
 
         fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group/bid/:gid', {schema}, async (req, res)=>{
-            const {uid, role} = req.session.token!;
-
             const {gid} = req.params;
+
+
+            const {rows:[count_winner]} = await Postgres.query<{count:num_str}>(`SELECT COUNT(*) FROM roska_members WHERE gid=$1;`, [gid]);
+            if (Number(count_winner.count) > 0) {
+                return res.errorHandler(GroupError.DUPLICATE_BID);
+            }
+
+            
             const {rows:roska_bids} = await Postgres.query<RoskaBids>(`SELECT * FROM roska_bids WHERE gid=$1 ORDER BY bid_amount DESC;`, [gid]);
             if (roska_bids.length === 0) {
                 return res.errorHandler(GroupError.NO_MEMBER_BID);
