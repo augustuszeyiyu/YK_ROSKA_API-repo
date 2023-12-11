@@ -573,30 +573,6 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(row);
         });
     }
-    /** 會組序號 sid下的會員列表 **/
-    {
-        const schema = {
-			description: '搜搜尋會組序號 sid',
-			summary: '搜尋會組序號 sid',
-            params: {
-                type: 'object',
-                properties:{
-                    sid: {type: 'string'}
-                },
-                required:["sid"],
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get<{Params:{sid:RoskaMembers['sid']}}>('/group/members/:sid', {schema}, async (req, res)=>{
-
-            const {sid} = req.params;
-            const {rows} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE sid=$1 ORDER BY mid ASC;`, [sid]);
-
-            return res.status(200).send(rows);
-        });
-    }
-    
     /** 刪除會組序號 sid **/
     {
         const schema = {

@@ -1,12 +1,9 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { GroupFrequency, RoskaGroups, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
+import { RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
-import { ErrorCode } from "/lib/error-code";
-import { BaseError } from "/lib/error";
-import { GenWhiteListPattern, INT_POSSITIVE_STR_FORMAT, SORT_ORDER } from "/data-type/common-helpers";
 import { GroupError } from "/lib/error/gruop-error";
 
 
@@ -119,55 +116,4 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send({});
         });
     }
-
-    function generateNextSid(last_group_id:string) {
-        let  currentPrefix = last_group_id.substring(1,2);
-        let  currentNumber = Number(last_group_id.substring(2, last_group_id.length));
-        
-        
-        // Increment the number and handle prefix changes
-        currentNumber++;
-        if (currentNumber > 9999) {
-            currentNumber = 1; // Reset the number to '1'
-            currentPrefix = String.fromCharCode(currentPrefix.charCodeAt(0) + 1); // Increment the prefix character
-        }
-        
-        // Create the ID by combining the prefix, number, and date
-        const sid = `Y${currentPrefix}${currentNumber.toString().padStart(4, '0')}`;
-        console.log(sid);
-        return sid;
-    }
-    
-
-    function generateNextGid(sid:string, start_date:string) {
-       const new_date = getPreviousWeekday( start_date );
-
-        const gid = `${sid}-${new_date}`;
-        console.log(gid);
-
-        return gid;
-    }
-
-    function getPreviousWeekday(date:string) {
-        // Create a new Date object for the given epoch timestamp
-        const currentDate = new Date(date);
-      
-        // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-        const currentDayOfWeek = currentDate.getDay();
-      
-        // Check if the current day is a weekend (Saturday or Sunday)
-        if (currentDayOfWeek === 0 || currentDayOfWeek === 6) {
-          // If it's a weekend, subtract the appropriate number of days to get the previous Friday (5)
-          const daysToSubtract = currentDayOfWeek === 0 ? 2 : 1;
-          currentDate.setDate(currentDate.getDate() - daysToSubtract);
-        }
-      
-        // Return the date of the previous weekday (which may be the same date if it's not a weekend)
-        const today = new Date(currentDate);
-        const year = `${today.getFullYear() % 100}`.padStart(2, '0'); // Ensure 2 digits for year
-        const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Ensure 2 digits for month
-        const day = today.getDate().toString().padStart(2, '0'); // Ensure 2 digits for day
-        const yymmdd = `${year}${month}${day}`;
-        return yymmdd;
-      }
 };
