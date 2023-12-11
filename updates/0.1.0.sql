@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS "users" (
     volunteer_uid				    VARCHAR(32)         NOT NULL DEFAULT '',
     volunteer_path				    LTREE				DEFAULT NULL,
     revoked                         BOOLEAN             NOT NULL DEFAULT false,
-    password                        TEXT                NOT NULL,
+    password                        TEXT                NOT NULL DEFAULT '',
 	update_time					    TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					    TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );

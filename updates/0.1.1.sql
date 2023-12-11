@@ -1,6 +1,10 @@
 SET search_path TO "public";
 
 
+-- user
+ALTER TABLE users ALTER COLUMN password SET default '';
+
+
 -- Create a trigger function to update win_time and installment_deadline
 CREATE OR REPLACE FUNCTION update_win_time_and_deadline()
 RETURNS TRIGGER AS $$
