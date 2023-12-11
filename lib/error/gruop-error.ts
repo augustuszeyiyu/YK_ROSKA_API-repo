@@ -20,4 +20,8 @@ export class GroupError {
 		status:400, code:'api#gruop#group-serial-is-full',
 		msg:'此會組已額滿'
 	};
+	public static NO_MEMBER_BID:HuntErrorItem = {
+		status:400, code:'api#gruop#no-member-bid',
+		msg:'無人下標'
+	};
 };

@@ -135,27 +135,8 @@ export class UserError {
 		status:400, code:'api#user#referrer-not-exists',
 		msg:'Referrer does not exists'
 	};
-
-	public static CANNOT_DOWNGRADE:HuntErrorItem = {
-		status:400, code:'api#user#cannot-downgrade',
-		msg:'Cannot downgrade'
-	};
-	public static MEMBERSHIP_EXPIRED:HuntErrorItem = {
-		status:400, code:'api#user#membership-expired',
-		msg:'membership expired'
-	};
-
 	public static REFERRAL_USER_NOT_EXISTS:HuntErrorItem = {
 		status:400, code:'api#user#referral-user-not-exists',
 		msg:'Referral user does not exists'
-	};
-	public static INSUFFICIENT_BALANCE:HuntErrorItem = {
-		status:400, code:'api#user#insufficient-balance',
-		msg:'Insufficient balance when withdraw from your account.'
-	};
-
-	public static WRONG_WALLET_ADDRESS:HuntErrorItem = {
-		status:400, code:'api#user#wrong-wallet-address',
-		msg:'Invalid wallet address.'
 	};
 };

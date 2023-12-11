@@ -1,7 +1,7 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { GroupFrequency, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
+import { GroupFrequency, RoskaGroups, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
@@ -87,7 +87,8 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(rows);
         });
     }
-    
+
+
     /** 刪除會員 **/
     {
         const schema = {

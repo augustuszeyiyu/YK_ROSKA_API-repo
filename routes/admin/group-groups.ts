@@ -228,31 +228,32 @@ export = async function(fastify: FastifyInstance) {
         });
     }
 
+    /** 下標列表 */
     {
         const schema = {
-			description: '下標',
-			summary: '下標',
+			description: '下標列表',
+			summary: '下標列表',
             params: {
                 type: 'object',
 				properties: {
-                    sid: { type: 'string' }
+                    gid: { type: 'string' }
                 },
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group-members/:sid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group/bid/list/:gid', {schema}, async (req, res)=>{
 
-            const {sid} = req.params;
+            const {gid} = req.params;
 
 
             const {rows} = await Postgres.query(
-                `SELECT m.mid, m.sid, m.uid, u.contact_mobile_number, u.address
-                FROM roska_members m 
-                LEFT JOIN users u ON m.uid=u.uid
-                WHERE m.sid=$1
-                GROUP BY m.mid, m.sid, m.uid, u.contact_mobile_number, u.address
-                ORDER BY m.mid ASC;`,[sid]);
+                `SELECT b.mid, b.sid, b.uid, u.name, b.bid_amount
+                FROM roska_bids b 
+                LEFT JOIN users u ON b.uid=u.uid
+                WHERE m.gid=$1
+                GROUP BY m.mid, m.sid, m.uid, u.name, u.bid_amount
+                ORDER BY m.mid ASC;`,[gid]);
 
             return res.status(200).send(rows);
         });
@@ -273,21 +274,24 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
         };
 
-        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group-bid/:gid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group/bid/:gid', {schema}, async (req, res)=>{
             const {uid, role} = req.session.token!;
 
             const {gid} = req.params;
             const {rows:roska_bids} = await Postgres.query<RoskaBids>(`SELECT * FROM roska_bids WHERE gid=$1 ORDER BY bid_amount DESC;`, [gid]);
+            if (roska_bids.length === 0) {
+                return res.errorHandler(GroupError.NO_MEMBER_BID);
+            }
 
             const sid = roska_bids[0].sid;
             const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
 
-            console.log(roska_serial.bid_unit_spacing, roska_serial.max_bid_amount);
+            console.log({roska_bid_count: roska_bids.length, bid_unit_spacing:roska_serial.bid_unit_spacing, max_bid_amount:roska_serial.max_bid_amount});
             
 
             const candidate:RoskaCandidate[] = []; 
             
-            for (let index = roska_serial.max_bid_amount; index > roska_serial.min_bid_amount; index-=roska_serial.bid_unit_spacing) {
+            for (let index = roska_serial.max_bid_amount; index >= roska_serial.min_bid_amount; index-=roska_serial.bid_unit_spacing) {
 
                 for (const {mid, gid, sid, uid, bid_amount} of roska_bids) {
 
