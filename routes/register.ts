@@ -101,7 +101,7 @@ export = async function(fastify: FastifyInstance) {
 				else
 				if (isValidPassword(password) === false) 
 											{ return res.errorHandler(UserError.INVALID_PASSWORD); }
-				else						{ payload.password = password; }
+
 
 				if (gender === undefined)	{ return res.errorHandler(UserError.GENDER_IS_REQUIRED); }
 				else						{ payload.gender = gender; }
@@ -175,9 +175,13 @@ export = async function(fastify: FastifyInstance) {
 				INSERT INTO users (${Object.keys(payload).join(', ')})
 				VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')}) 
 				RETURNING *;`, payload);
-			console.log(user_data_sql);
-			
+			console.log(user_data_sql);			
 			const {rowCount} = await Postgres.query<User>(user_data_sql);
+
+			// update password
+			await Postgres.query(`UPDATE users SET password = $2 WHERE uid=$1;`, [payload.uid, password]);
+
+
 			if (rowCount === 1)  return res.status(200).send({});
 			else 				 return res.errorHandler(BaseError.DB_INSERTION_FAILURE);
 			

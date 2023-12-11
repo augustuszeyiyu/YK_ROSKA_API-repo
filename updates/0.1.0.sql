@@ -59,8 +59,6 @@ RETURNS trigger AS $$
 BEGIN
 
     NEW.nid = UPPER(NEW.nid);
-    NEW.password = encode(digest(NEW.password, 'sha1'), 'hex');
-    NEW.password = crypt(NEW.password, gen_salt('bf',8));
 
     IF NEW.line_id IS NOT NULL THEN
         NEW.line_id = LOWER(NEW.line_id);
