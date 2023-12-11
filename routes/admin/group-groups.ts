@@ -248,12 +248,12 @@ export = async function(fastify: FastifyInstance) {
 
 
             const {rows} = await Postgres.query(
-                `SELECT b.mid, b.sid, b.uid, u.name, b.bid_amount
+                `SELECT b.mid, b.sid, b.uid, b.bid_amount, u.name||RIGHT(mid, 3) as name
                 FROM roska_bids b 
-                LEFT JOIN users u ON b.uid=u.uid
-                WHERE m.gid=$1
-                GROUP BY m.mid, m.sid, m.uid, u.name, u.bid_amount
-                ORDER BY m.mid ASC;`,[gid]);
+                INNER JOIN users u ON b.uid=u.uid
+                WHERE b.gid=$1
+                GROUP BY b.mid, b.sid, b.uid, u.name, b.bid_amount
+                ORDER BY b.mid ASC;`,[gid]);
 
             return res.status(200).send(rows);
         });
@@ -291,10 +291,14 @@ export = async function(fastify: FastifyInstance) {
 
             const candidate:RoskaCandidate[] = []; 
             
-            for (let index = roska_serial.max_bid_amount; index >= roska_serial.min_bid_amount; index-=roska_serial.bid_unit_spacing) {
+            for (let index = Number(roska_serial.max_bid_amount); index >= Number(roska_serial.min_bid_amount); index-= Number(roska_serial.bid_unit_spacing)) {
 
+                console.log({index});
+                
                 for (const {mid, gid, sid, uid, bid_amount} of roska_bids) {
 
+                    console.log({mid, gid, sid, uid, bid_amount});
+                    
                     if (roska_serial.max_bid_amount === bid_amount) {
                         candidate.push({mid, gid, sid, uid, bid_amount});
                     }                    
@@ -305,20 +309,21 @@ export = async function(fastify: FastifyInstance) {
 
             const winner_index = Math.floor(Math.random() * candidate.length);
             const winner_candidate = candidate[winner_index];
-            console.log(winner_index);
+            console.log({winner_index, winner_candidate});
             
             // NOTE: updaet roska_bids
             {
                 const sql = PGDelegate.format(`
                     UPDATE roska_bids 
-                        SET win = true 
-                        WHERE mid={mid} 
+                    SET win = true 
+                    WHERE   mid={mid} 
                         AND gid={gid}
                         AND sid={sid}
                         AND uid={uid}
-                        AND bid_amount={bit_amount};`, 
+                        AND bid_amount = {bid_amount};`, 
                     winner_candidate);
 
+                console.log(sql);
                 await Postgres.query(sql);
             }
 
@@ -326,14 +331,16 @@ export = async function(fastify: FastifyInstance) {
             {
                 const sql = PGDelegate.format(`
                     UPDATE roska_groups
-                        SET mid = {mid},
-                            uid = {uid},
-                            bid_amount = {bit_amount},
-                            win_time = NOW()
-                        WHERE gid={gid}
+                    SET mid = {mid},
+                        uid = {uid},
+                        bid_amount = {bid_amount},
+                        win_time = NOW()
+                    WHERE   gid={gid}
                         AND sid={sid};`, 
                     winner_candidate);
 
+                console.log(sql);
+                
                 await Postgres.query(sql);
             }
 
@@ -361,20 +368,30 @@ export = async function(fastify: FastifyInstance) {
 
                 const sql = PGDelegate.format(`
                     UPDATE roska_members
-                        SET gid = {gid},
-                            uid = {uid},
-                            win_amount = {win_amount},
-                            win_time = NOW()
-                        WHERE mid = {mid},
+                    SET gid = {gid},
+                        uid = {uid},
+                        win_amount = {win_amount},
+                        win_time = NOW()
+                    WHERE   mid = {mid}
                         AND uid = {uid}
-                        AND sid = {sid};`, 
+                        AND sid = {sid}
+                    RETURNING *;`, 
                     update_member);
 
-                await Postgres.query(sql);
+                await Postgres.query(sql);                
             }
 
+            {
+                const {rows:[row]} = await Postgres.query(`
+                    SELECT m.*, u.name||RIGHT(mid, 3) as name
+                    FROM roska_members m
+                    INNER JOIN users u ON m.uid=u.uid
+                    WHERE m.gid = $1;`, [gid]);
+
+                res.status(200).send(row);
+            }
             
-            return res.status(200).send(winner_candidate);
+           
         });
     }
 
