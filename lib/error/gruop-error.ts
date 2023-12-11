@@ -28,4 +28,8 @@ export class GroupError {
 		status:400, code:'api#gruop#duplicate-bid',
 		msg:'重複下標'
 	};
+	public static NOT_PAST_BID_END_TIME:HuntErrorItem = {
+		status:400, code:'api#gruop#not-past-bid_end_time',
+		msg:'尚未達到開標日期'
+	};
 };

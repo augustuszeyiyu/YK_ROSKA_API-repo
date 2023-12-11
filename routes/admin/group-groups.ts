@@ -8,6 +8,8 @@ import { ErrorCode } from "/lib/error-code";
 import { BaseError } from "/lib/error";
 import { INT_POSSITIVE_STR_FORMAT, SORT_ORDER } from "/data-type/common-helpers";
 import { GroupError } from "/lib/error/gruop-error";
+import { SysVarControl } from "/lib/sysvar";
+import { SysVar } from "/data-type/sysvar";
 
 
 export = async function(fastify: FastifyInstance) {
@@ -317,8 +319,30 @@ export = async function(fastify: FastifyInstance) {
             const winner_candidate = candidate[winner_index];
             console.log({winner_index, winner_candidate});
             
-            // NOTE: updaet roska_bids
+
+            // NOTE: updaet roska_groups
             {
+                const sql = PGDelegate.format(`
+                    UPDATE roska_groups
+                    SET mid = {mid},
+                        uid = {uid},
+                        bid_amount = {bid_amount},
+                        win_time = NOW()
+                    WHERE   gid={gid}
+                        AND sid={sid}
+                        AND NOW() > bid_end_time;`, 
+                    winner_candidate);
+
+                console.log(sql);
+                
+                const {rowCount} = await Postgres.query(sql);
+                if (rowCount === 0) {
+                    return res.errorHandler(GroupError.NOT_PAST_BID_END_TIME);
+                }
+            }
+
+            // NOTE: updaet roska_bids
+             {
                 const sql = PGDelegate.format(`
                     UPDATE roska_bids 
                     SET win = true 
@@ -333,25 +357,12 @@ export = async function(fastify: FastifyInstance) {
                 await Postgres.query(sql);
             }
 
-            // NOTE: updaet roska_groups
-            {
-                const sql = PGDelegate.format(`
-                    UPDATE roska_groups
-                    SET mid = {mid},
-                        uid = {uid},
-                        bid_amount = {bid_amount},
-                        win_time = NOW()
-                    WHERE   gid={gid}
-                        AND sid={sid};`, 
-                    winner_candidate);
-
-                console.log(sql);
-                
-                await Postgres.query(sql);
-            }
-
             // NOTE: updaet roska_members
             {
+                const {rows:[sysvar]} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key='handling_fee';`);
+                console.log({sysvar});
+                
+                
                 const {rows:[live_die]} = await Postgres.query<{live:num_str, die:num_str}>(`
                     SELECT 
                         COUNT(CASE WHEN gid = '' THEN 1 END) AS live,
@@ -359,17 +370,21 @@ export = async function(fastify: FastifyInstance) {
                     FROM roska_members
                     WHERE sid = $1;`, [sid]);
 
-                const live_member_count = Number(live_die.live) - 1;
+                console.log({live_die});
+                
+                const live_member_count = Number(live_die.live) - 2;
                 const die_member_count  = Number(live_die.die)  + 1;
                 const basic_unit_amount = Number(roska_serial.basic_unit_amount);
                 const bit_amount        = Number(winner_candidate.bid_amount);
+                console.log({live_member_count, die_member_count, basic_unit_amount, bit_amount});
+                
 
                 const update_member = {
                     mid: winner_candidate.mid,
                     sid: winner_candidate.sid,
                     uid: winner_candidate.uid,
                     gid: winner_candidate.gid,
-                    win_amount: (live_member_count * (basic_unit_amount - bit_amount)) + (die_member_count * basic_unit_amount)
+                    win_amount: (live_member_count * (basic_unit_amount - bit_amount)) + (die_member_count * basic_unit_amount) - (die_member_count * Number(sysvar.value))
                 }
 
                 const sql = PGDelegate.format(`
