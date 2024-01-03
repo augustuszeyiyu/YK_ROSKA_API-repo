@@ -5,87 +5,9 @@ import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { BaseError, LoginError, UserError } from '/lib/error';
 import { GroupError } from "/lib/error/gruop-error";
-import { SysVar } from "/data-type/sysvar";
 
 
 export = async function(fastify: FastifyInstance) {
-    /** 各會期結算列表 */
-    {
-        const schema = {
-			description: '各會期結算列表',
-			summary: '各會期結算列表',
-            params: {},
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get('/group/group/settlement-list', {schema}, async (req, res)=>{
-            if (req.session.is_login === false) {
-                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-            }
-
-            const {uid} = req.session.token!;
-
-            const {rows} = await Postgres.query<{win_time:RoskaGroups['win_time']}>(`
-                SELECT g.win_time
-                FROM roska_groups g
-                LEFT JOIN roska_members m ON g.sid=m.sid
-                WHERE m.uid = $1 AND g.win_time IS NOT NULL
-                GROUP BY g.win_time
-                ORDER BY win_time DESC`, [uid]);
-            return res.status(200).send(rows);
-        });
-    }
-    /** 各會期結算 */
-    {
-        const schema = {
-			description: '各會期結算',
-			summary: '各會期結算',
-            params: {
-                sid: {type: 'string'}
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/serial/settlement/:sid', {schema}, async (req, res)=>{
-            if (req.session.is_login === false) {
-                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-            }
-
-            const {uid} = req.session.token!;
-            const {sid} = req.params;
-
-            const {rows:SERIALS} = await Postgres.query<RoskaSerials>(`
-                SELECT * 
-                FROM roska_serials 
-                WHERE sid=$1`, [sid]);
-
-            const {rows:SYSVARS} = await Postgres.query<SysVar>(`
-                SELECT * 
-                FROM sysvar 
-                WHERE key in ($1, $2)
-                ORDER BY key ASC;`, ['handling_fee', 'transition_fee']);
-
-            const handling_fee = Number(SYSVARS[0].value);
-            const transition_fee = Number(SYSVARS[1].value);
-
-            const {rows:GROUPS} = await Postgres.query<RoskaGroups>(`
-                SELECT COUNT(g.gid),
-                    COUNT(CASE WHEN g.uid = $2 THEN g.mid ELSE '' END) as mid
-                    COUNT(CASE WHEN g.uid = $2 THEN 1 ELSE 0 END) as win
-                    COUNT(CASE WHEN m.uid = $2 AND m.trasfer = true THEN 1 ELSE 0 END) as win
-                FROM roska_groups g
-                LEFT JOIN roska_members m ON g.sid=m.sid
-                WHERE g.sid = $1 AND m.uid = $2 AND g.win_time IS NOT NULL
-                ORDER BY g.gid ASC`, [sid, uid]);
-
-            
-            for (const elm of GROUPS) {
-                
-            }
-            
-            return res.status(200).send(GROUPS);
-        });
-    }
 	/** 新成立會組列表 **/
     {
         const schema = {
@@ -95,14 +17,15 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get('/group/serial/new-list', {schema}, async (req, res)=>{
+        fastify.get('/group/member', {schema}, async (req, res)=>{
             if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
-
+            const {uid} = req.session.token!;
             
             const {rows} = await Postgres.query<RoskaSerials>(`
-                SELECT * FROM roska_serials 
+                SELECT * FROM roska_members m 
+                INNER JOIN roska_groups g on m.sid = g.sid 
                 WHERE bid_start_time >= NOW()
                 ORDER BY sid ASC`);
             return res.status(200).send(rows);

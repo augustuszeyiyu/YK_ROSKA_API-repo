@@ -24,6 +24,12 @@ export interface RoskaGroups {
     sid: uniqid,
     bid_start_time: string,
     bid_end_time: string,
+    mid: RoskaMembers['mid'],
+    uid: User['uid'],
+    bid_amoun: number,
+    win_time: string,
+    installment_amount: number,
+    installment_deadline: string,
     update_time: string,
     create_time: string,
 }
