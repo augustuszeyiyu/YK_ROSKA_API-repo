@@ -1,7 +1,7 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaBids, RoskaCandidate, RoskaGroups, RoskaGroupsRequiredInfo, RoskaMembers, RoskaSerials, RoskaSerialsRequiredInfo } from '/data-type/groups';
+import { RoskaBids, RoskaCandidate, RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
@@ -95,8 +95,8 @@ export = async function(fastify: FastifyInstance) {
                 uid: group_serial.uid,
                 gid: `${sid}-t00`,
                 sid: sid,
-                pay: 0,
                 earn: group_serial.basic_unit_amount * group_serial.cycles,
+                pay: 0,
                 handling_fee: 0,
                 transition_fee: 0,
             }]);
@@ -426,7 +426,7 @@ export = async function(fastify: FastifyInstance) {
                             gid,
                             sid: member.sid,
                             earn: 0,
-                            pay: basic_unit_amount,
+                            pay: -basic_unit_amount,
                             handling_fee: 0,
                             transition_fee: 0,
                         };
@@ -450,7 +450,7 @@ export = async function(fastify: FastifyInstance) {
                             sid: member.sid,
                             earn: update_member.win_amount,
                             pay: 0,
-                            handling_fee: member.details.length * handling_fee,
+                            handling_fee: -member.details.length * handling_fee,
                             transition_fee: 0,
                         };
                         member.details.push(detail);
@@ -476,7 +476,7 @@ export = async function(fastify: FastifyInstance) {
                             gid,
                             sid: member.sid,
                             earn: 0,
-                            pay: member.gid === ''? basic_unit_amount - bit_amount: basic_unit_amount,
+                            pay: member.gid === ''? -basic_unit_amount - bit_amount: -basic_unit_amount,
                             handling_fee: 0,
                             transition_fee: 0,
                         };
