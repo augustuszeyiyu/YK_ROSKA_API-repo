@@ -9,7 +9,7 @@ import { SysVar } from "/data-type/sysvar";
 
 
 export = async function(fastify: FastifyInstance) {
-    /** 各會期結算列表 */
+    /** 各會期結算列表 **/
     {
         const schema = {
 			description: '各會期結算列表',
@@ -28,14 +28,16 @@ export = async function(fastify: FastifyInstance) {
             const {rows} = await Postgres.query<{win_time:RoskaGroups['win_time']}>(`
                 SELECT g.win_time
                 FROM roska_groups g
-                LEFT JOIN roska_members m ON g.sid=m.sid
-                WHERE m.uid = $1 AND g.win_time IS NOT NULL
+                LEFT JOIN roska_members m ON g.sid = m.sid
+                WHERE m.uid = $1
                 GROUP BY g.win_time
                 ORDER BY win_time DESC`, [uid]);
+
+
             return res.status(200).send(rows);
         });
     }
-    /** 各會期結算 */
+    /** 各會期結算 **/
     {
         const schema = {
 			description: '各會期結算',
@@ -68,12 +70,20 @@ export = async function(fastify: FastifyInstance) {
             const handling_fee = Number(SYSVARS[0].value);
             const transition_fee = Number(SYSVARS[1].value);
 
-            const {rows:GROUPS} = await Postgres.query<RoskaGroups>(`
-                SELECT COUNT(g.gid),
-                    COUNT(CASE WHEN g.uid = $2 THEN g.mid ELSE '' END) as mid
-                    COUNT(CASE WHEN g.uid = $2 THEN 1 ELSE 0 END) as win
-                    COUNT(CASE WHEN m.uid = $2 AND m.trasfer = true THEN 1 ELSE 0 END) as win
+            const {rows} = await Postgres.query<{win_time:RoskaGroups['win_time']}>(`
+                SELECT g.gid, g.win_time
                 FROM roska_groups g
+                LEFT JOIN roska_members m ON g.sid = m.sid
+                WHERE m.uid = $1
+                GROUP BY g.gid, g.win_time
+                ORDER BY win_time DESC`, [uid]);
+
+
+            const {rows:GROUPS} = await Postgres.query<RoskaGroups>(`
+                SELECT 
+                FROM roska_members m
+                CROSS JOIN LATERAL jsonb_to_recordset(m."details") "d" ("id" integer,
+                                                                    "role" text)
                 LEFT JOIN roska_members m ON g.sid=m.sid
                 WHERE g.sid = $1 AND m.uid = $2 AND g.win_time IS NOT NULL
                 ORDER BY g.gid ASC`, [sid, uid]);

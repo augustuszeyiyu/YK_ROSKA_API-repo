@@ -91,8 +91,10 @@ export = async function(fastify: FastifyInstance) {
             const mid = `${sid}-00`;
             const details = JSON.stringify([{
                 cycles: 0,
+                mid,
                 uid: group_serial.uid,
                 gid: `${sid}-t00`,
+                sid: sid,
                 pay: 0,
                 earn: group_serial.basic_unit_amount * group_serial.cycles,
                 handling_fee: 0,
@@ -419,8 +421,10 @@ export = async function(fastify: FastifyInstance) {
                     if (member.mid === `${sid}-00`) {
                         const detail = {
                             cycles: member.details.length,
+                            mid: member.mid,
                             uid: member.uid,
                             gid,
+                            sid: member.sid,
                             earn: 0,
                             pay: basic_unit_amount,
                             handling_fee: 0,
@@ -440,8 +444,10 @@ export = async function(fastify: FastifyInstance) {
                     if (member.mid === update_member.mid) {
                         const detail = {
                             cycles: member.details.length,
+                            mid: member.mid,
                             uid: member.uid,
                             gid,
+                            sid: member.sid,
                             earn: update_member.win_amount,
                             pay: 0,
                             handling_fee: member.details.length * handling_fee,
@@ -465,8 +471,10 @@ export = async function(fastify: FastifyInstance) {
                     else {
                         const detail = {
                             cycles: member.details.length,
+                            mid: member.mid,
                             uid: member.uid,
                             gid,
+                            sid: member.sid,
                             earn: 0,
                             pay: member.gid === ''? basic_unit_amount - bit_amount: basic_unit_amount,
                             handling_fee: 0,
