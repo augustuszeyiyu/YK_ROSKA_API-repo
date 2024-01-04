@@ -394,9 +394,10 @@ export = async function(fastify: FastifyInstance) {
 
             // NOTE: updaet roska_members
             {
-                const {rows:[sysvar]} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key='handling_fee';`);
+                const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee') ORDER BY key ASC;`);
                 console.log({sysvar});
-                
+                const handling_fee = Number(sysvar[0].value);
+                const transition_fee = Number(sysvar[1].value);
                 
                 const {rows:[live_die]} = await Postgres.query<{live:num_str, die:num_str}>(`
                     SELECT 
@@ -419,22 +420,82 @@ export = async function(fastify: FastifyInstance) {
                     sid: winner_candidate.sid,
                     uid: winner_candidate.uid,
                     gid: winner_candidate.gid,
-                    win_amount: (live_member_count * (basic_unit_amount - bit_amount)) + (die_member_count * basic_unit_amount) - (die_member_count * Number(sysvar.value))
+                    win_amount: (live_member_count * (basic_unit_amount - bit_amount)) + (die_member_count * basic_unit_amount) - (die_member_count * handling_fee)
                 }
 
-                const sql = PGDelegate.format(`
-                    UPDATE roska_members
-                    SET gid = {gid},
-                        uid = {uid},
-                        win_amount = {win_amount},
-                        win_time = NOW()
-                    WHERE   mid = {mid}
-                        AND uid = {uid}
-                        AND sid = {sid}
-                    RETURNING *;`, 
-                    update_member);
 
-                await Postgres.query(sql);                
+
+                let promise_list:string[] = [];
+                const {rows:rosroska_members} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE sid=$1 ORDER BY mid ASC;`, [sid]);
+                for (const member of rosroska_members) {
+                    if (member.mid === `${sid}-00`) {
+                        const detail = {
+                            uid: member.uid,
+                            gid,
+                            earn: 0,
+                            pay: basic_unit_amount,
+                            handling_fee: 0,
+                            transition_fee: 0,
+                        };
+                        member.details.push(detail);
+
+                        const sql = PGDelegate.format(`
+                            UPDATE roska_members
+                            SET details = {details}
+                            WHERE   mid = {mid};`, 
+                        {mid: member.mid, details: JSON.stringify(member.details)});
+                        
+                        promise_list.push(sql);
+                    }
+                    else
+                    if (member.mid === update_member.mid) {
+                        const detail = {
+                            uid: member.uid,
+                            gid,
+                            earn: update_member.win_amount,
+                            pay: 0,
+                            handling_fee: member.details.length * handling_fee,
+                            transition_fee: 0,
+                        };
+                        member.details.push(detail);
+
+                        const sql = PGDelegate.format(`
+                            UPDATE roska_members
+                            SET gid = {gid},
+                                uid = {uid},
+                                win_amount = {win_amount},
+                                win_time = NOW(),
+                                details = {details}
+                            WHERE   mid = {mid}
+                                AND uid = {uid}
+                                AND sid = {sid};`, 
+                        Object.assign(update_member, {details: JSON.stringify(member.details)}));
+                        promise_list.push(sql);
+                    }
+                    else {
+                        const detail = {
+                            uid: member.uid,
+                            gid,
+                            earn: 0,
+                            pay: member.gid === ''? basic_unit_amount - bit_amount: basic_unit_amount,
+                            handling_fee: 0,
+                            transition_fee: 0,
+                        };
+                        member.details.push(detail);
+
+                        const sql = PGDelegate.format(`
+                            UPDATE roska_members
+                            SET details = {details}
+                            WHERE   mid = {mid};`, 
+                        {mid: member.mid, details: JSON.stringify(member.details)});
+
+                        promise_list.push(sql);
+                    }
+                }
+
+                
+
+                await Postgres.query(promise_list.join('\n'));                
             }
 
             {
