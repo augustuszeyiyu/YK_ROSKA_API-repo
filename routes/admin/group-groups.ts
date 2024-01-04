@@ -446,7 +446,7 @@ export = async function(fastify: FastifyInstance) {
 
                         const sql = PGDelegate.format(`
                             UPDATE roska_members
-                            SET details = {details}
+                            SET details = {details}::jsonb
                             WHERE   mid = {mid};`, 
                         {mid: member.mid, details: JSON.stringify(member.details)});
                         
@@ -471,7 +471,7 @@ export = async function(fastify: FastifyInstance) {
                                 uid = {uid},
                                 win_amount = {win_amount},
                                 win_time = NOW(),
-                                details = {details}
+                                details = {details}::jsonb
                             WHERE   mid = {mid}
                                 AND uid = {uid}
                                 AND sid = {sid};`, 
@@ -492,7 +492,7 @@ export = async function(fastify: FastifyInstance) {
 
                         const sql = PGDelegate.format(`
                             UPDATE roska_members
-                            SET details = {details}
+                            SET details = {details}::jsonb
                             WHERE   mid = {mid};`, 
                         {mid: member.mid, details: JSON.stringify(member.details)});
 
