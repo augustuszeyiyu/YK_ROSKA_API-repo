@@ -43,23 +43,19 @@ export = async function(fastify: FastifyInstance) {
 			description: '各會期結算',
 			summary: '各會期結算',
             params: {
-                sid: {type: 'string'}
+                win_time: {type: 'string'}
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/serial/settlement/:sid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{win_time:RoskaGroups['win_time']}}>('/group/serial/settlement/:win_time', {schema}, async (req, res)=>{
             if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
 
             const {uid} = req.session.token!;
-            const {sid} = req.params;
+            const {win_time} = req.params;
 
-            const {rows:SERIALS} = await Postgres.query<RoskaSerials>(`
-                SELECT * 
-                FROM roska_serials 
-                WHERE sid=$1`, [sid]);
 
             const {rows:SYSVARS} = await Postgres.query<SysVar>(`
                 SELECT * 
@@ -79,21 +75,26 @@ export = async function(fastify: FastifyInstance) {
                 ORDER BY win_time DESC`, [uid]);
 
 
-            const {rows:GROUPS} = await Postgres.query<RoskaGroups>(`
-                SELECT 
-                FROM roska_members m
-                CROSS JOIN LATERAL jsonb_to_recordset(m."details") "d" ("id" integer,
-                                                                    "role" text)
-                LEFT JOIN roska_members m ON g.sid=m.sid
-                WHERE g.sid = $1 AND m.uid = $2 AND g.win_time IS NOT NULL
-                ORDER BY g.gid ASC`, [sid, uid]);
+            const {rows:MEMBER_LIST} = await Postgres.query<RoskaGroups>(`
+                SELECT md.*
+                FROM roska_members, 
+                    jsonb_to_recordset(roska_members.details) AS md (
+                        cycles SMALLINT,
+                        mid VARCHAR(20),
+                        uid VARCHAR(32),
+                        gid VARCHAR(17),
+                        sid VARCHAR(13),
+                        earn DECIMAL,
+                        pay  DECIMAL,
+                        handling_fee   DECIMAL,
+                        transition_fee DECIMAL
+                    )
+                INNER JOIN roska_groups g ON g.gid = md.gid AND g.sid = md.sid
+                WHERE md.uid = $1 AND g.win_time like '$2%';`, [uid, win_time]);
 
             
-            for (const elm of GROUPS) {
-                
-            }
-            
-            return res.status(200).send(GROUPS);
+  
+            return res.status(200).send(MEMBER_LIST);
         });
     }
 	/** 新成立會組列表 **/
