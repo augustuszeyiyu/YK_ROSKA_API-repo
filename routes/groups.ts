@@ -90,7 +90,7 @@ export = async function(fastify: FastifyInstance) {
                         transition_fee DECIMAL
                     )
                 INNER JOIN roska_groups g ON g.gid = md.gid AND g.sid = md.sid
-                WHERE md.uid = $1 AND g.win_time like '$2%';`, [uid, win_time]);
+                WHERE md.uid = $1 AND g.win_time like $2;`, [uid, `${win_time}%`]);
 
             
   
