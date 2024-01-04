@@ -1,9 +1,17 @@
 SET search_path TO "public";
 
--- Add Column
-ALTER TABLE roska_groups  RENAME COLUMN IF EXISTS installment_amount TO win_amount;
+-- Add/rename Column
+DO $$
+    BEGIN
+        ALTER TABLE roska_groups  RENAME COLUMN  installment_amount TO win_amount;
+    EXCEPTION
+        WHEN undefined_column THEN RAISE NOTICE 'column installment_amount does not exist';
+     END;
+$$;
+
 
 ALTER TABLE roska_members ADD COLUMN IF NOT EXISTS details      JSONB    NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS "roska_members#details" ON roska_members USING gin (details);
 
 
 CREATE OR REPLACE FUNCTION set_roska_groups_bid_end_time()

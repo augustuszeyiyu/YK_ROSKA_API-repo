@@ -291,7 +291,7 @@ CREATE TABLE IF NOT EXISTS roska_members (
     win_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win_time                    TIMESTAMPTZ,
     transition                  SMALLINT            NOT NULL DEFAULT 0,
-    pay                         JSONB               NOT NULL DEFAULT '{}'::jsonb;
+    details                     JSONB               NOT NULL DEFAULT '{}'::jsonb;
     installment_deadline        TIMESTAMPTZ,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
@@ -299,6 +299,9 @@ CREATE TABLE IF NOT EXISTS roska_members (
     FOREIGN KEY (sid) REFERENCES roska_serials(sid),
     FOREIGN KEY (uid) REFERENCES users(uid)
 );
+
+CREATE INDEX IF NOT EXISTS "roska_members#details" ON roska_members USING gin (details);
+
 --不轉讓 有得標 (transition=0)
 -- (死會數  * basic_unit_amount) + (活會數 ＊ (basic_unit_amount-bid_amount)) 
 
