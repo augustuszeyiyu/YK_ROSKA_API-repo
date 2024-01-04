@@ -90,9 +90,13 @@ export = async function(fastify: FastifyInstance) {
            
             const mid = `${sid}-00`;
             const details = JSON.stringify([{
+                cycles: 0,
+                uid: group_serial.uid,
                 gid: `${sid}-t00`,
                 pay: 0,
-                earn: group_serial.basic_unit_amount * group_serial.cycles
+                earn: group_serial.basic_unit_amount * group_serial.cycles,
+                handling_fee: 0,
+                transition_fee: 0,
             }]);
             const first_member = PGDelegate.format(`
                 INSERT INTO roska_members (mid, sid, uid, gid, win_amount, details) 
@@ -430,6 +434,7 @@ export = async function(fastify: FastifyInstance) {
                 for (const member of rosroska_members) {
                     if (member.mid === `${sid}-00`) {
                         const detail = {
+                            cycles: member.details.length,
                             uid: member.uid,
                             gid,
                             earn: 0,
@@ -450,6 +455,7 @@ export = async function(fastify: FastifyInstance) {
                     else
                     if (member.mid === update_member.mid) {
                         const detail = {
+                            cycles: member.details.length,
                             uid: member.uid,
                             gid,
                             earn: update_member.win_amount,
@@ -474,6 +480,7 @@ export = async function(fastify: FastifyInstance) {
                     }
                     else {
                         const detail = {
+                            cycles: member.details.length,
                             uid: member.uid,
                             gid,
                             earn: 0,
