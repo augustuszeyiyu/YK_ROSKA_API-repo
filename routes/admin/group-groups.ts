@@ -84,7 +84,7 @@ export = async function(fastify: FastifyInstance) {
                         INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
                         VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')});`, payload)
                     );
-                }                
+                }
             }
             
            
