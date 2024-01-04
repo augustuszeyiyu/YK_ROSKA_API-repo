@@ -173,7 +173,6 @@ CREATE TABLE IF NOT EXISTS roska_serials (
     frequency                   VARCHAR(15)         NOT NULL DEFAULT 'monthly',
     bid_start_time              TIMESTAMPTZ         NOT NULL,
     bid_end_time                TIMESTAMPTZ         NOT NULL,
-    mids                        TEXT[]              NOT NULL '{}',
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)

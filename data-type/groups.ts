@@ -14,7 +14,6 @@ export interface RoskaSerials {
     frequency: GroupFrequencys,
     bid_start_time: string,
     bid_end_time: string,
-    mids: string[],
     update_time: string,
     create_time: string,
 }

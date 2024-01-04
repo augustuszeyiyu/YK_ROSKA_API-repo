@@ -343,22 +343,6 @@ export = async function(fastify: FastifyInstance) {
             console.log({winner_index, winner_candidate});
             
 
-            // NOTE: updaet roska_serials
-            {
-                const sql = PGDelegate.format(`
-                    UPDATE roska_serials
-                    SET mids = mids || {new_mid}
-                    WHERE sid = {sid};`, 
-                    {sid, new_mid: winner_candidate.mid});
-
-                console.log(sql);
-                
-                const {rowCount} = await Postgres.query(sql);
-                if (rowCount === 0) {
-                    return res.errorHandler(GroupError.NOT_PAST_BID_END_TIME);
-                }
-            }
-
             // NOTE: updaet roska_groups
             {
                 const sql = PGDelegate.format(`

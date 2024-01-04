@@ -137,11 +137,6 @@ export = async function(fastify: FastifyInstance) {
                 RETURNING *;`, payload);
             const {rows:[result]} = await Postgres.query<RoskaSerials>(sql);
 
-            await Postgres.query<RoskaSerials>(`
-                UPDATE roska_serials
-                SET mids = mids || ARRAY[$2]
-                WHERE sid = $1
-            `, [sid, `${sid}-00`]);
 
 			res.status(200).send({sid})
 		});
@@ -597,7 +592,7 @@ export = async function(fastify: FastifyInstance) {
             const {sid} = req.params;
             
             await Postgres.query<RoskaSerials>(`DELETE FROM roska_bids    WHERE sid=$1;`, [sid]);
-            await Postgres.query<RoskaSerials>(`DELETE FROM roska_members WHERE sid=$1;`, [sid]);            
+            await Postgres.query<RoskaSerials>(`DELETE FROM roska_members WHERE sid=$1;`, [sid]);
             await Postgres.query<RoskaSerials>(`DELETE FROM roska_groups  WHERE sid=$1;`, [sid]);
             await Postgres.query<RoskaSerials>(`DELETE FROM roska_serials WHERE sid=$1;`, [sid]);
             
