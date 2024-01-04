@@ -173,6 +173,7 @@ CREATE TABLE IF NOT EXISTS roska_serials (
     frequency                   VARCHAR(15)         NOT NULL DEFAULT 'monthly',
     bid_start_time              TIMESTAMPTZ         NOT NULL,
     bid_end_time                TIMESTAMPTZ         NOT NULL,
+    mids                        TEXT[]              NOT NULL '{}',
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     FOREIGN KEY (uid) REFERENCES users(uid)
@@ -224,8 +225,8 @@ CREATE TABLE IF NOT EXISTS roska_groups (
     mid                         VARCHAR(20)         NOT NULL DEFAULT '',
     uid                         VARCHAR(32)         NOT NULL DEFAULT '',
     bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
+    win_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win_time                    TIMESTAMPTZ,
-    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
     installment_deadline        TIMESTAMPTZ,
     assignment_path             LTREE               NOT NULL DEFAULT '',
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
@@ -291,7 +292,7 @@ CREATE TABLE IF NOT EXISTS roska_members (
     win_amount                  DECIMAL             NOT NULL DEFAULT 0,
     win_time                    TIMESTAMPTZ,
     transition                  SMALLINT            NOT NULL DEFAULT 0,
-    installment_amount          DECIMAL             NOT NULL DEFAULT 0,
+    pay                         JSONB               NOT NULL DEFAULT '{}'::jsonb;
     installment_deadline        TIMESTAMPTZ,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),

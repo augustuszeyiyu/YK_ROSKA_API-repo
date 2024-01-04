@@ -51,7 +51,7 @@ export = async function(fastify: FastifyInstance) {
             
             let group_sql_list:string[] = [];
             const startTime = new Date(group_serial.bid_start_time);
-            for (let index = 1; index <= group_serial.cycles; index++) {
+            for (let index = 0; index <= group_serial.cycles; index++) {
 
                 // NOTE: Generate gid
                 const gid = `${sid}-t`  + `${index}`.padStart(2, '0');
@@ -67,21 +67,40 @@ export = async function(fastify: FastifyInstance) {
 
                 console.log(bid_start_time);
                 
-                // Add the member information to the list
-                const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toISOString() }
-                group_sql_list.push(PGDelegate.format(`
-                    INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
-                    VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')});`, payload)
-                );
+                if (index === 0) {
+                    // Add the member information to the list
+                    const payload:Partial<RoskaGroups> = { gid, sid, mid:`${sid}-00`, uid:group_serial.uid, win_amount: group_serial.basic_unit_amount * group_serial.cycles, bid_start_time: new Date(bid_start_time).toISOString() }
+                    group_sql_list.push(PGDelegate.format(`
+                        INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
+                        VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')});`, payload)
+                    )
+                    console.log(group_sql_list);
+                    
+                }
+                else {
+                    // Add the member information to the list
+                    const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toISOString() }
+                    group_sql_list.push(PGDelegate.format(`
+                        INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
+                        VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')});`, payload)
+                    );
+                }                
             }
             
            
             const mid = `${sid}-00`;
+            const details = JSON.stringify([{
+                gid: `${sid}-t00`,
+                pay: 0,
+                earn: group_serial.basic_unit_amount * group_serial.cycles
+            }]);
             const first_member = PGDelegate.format(`
-                INSERT INTO roska_members (mid, sid, uid) 
-                VALUES({mid}, {sid}, {uid});`, 
-                {mid, sid, uid:group_serial.uid}
+                INSERT INTO roska_members (mid, sid, uid, gid, win_amount, details) 
+                VALUES({mid}, {sid}, {uid}, {gid}, {win_amount}, {details}::jsonb);`, 
+                {mid, sid, uid:group_serial.uid, gid:`${sid}-t00`, win_amount:group_serial.basic_unit_amount * group_serial.cycles, details},
             );
+            console.log(first_member);
+            
             group_sql_list.push(first_member);
 
 
@@ -319,6 +338,22 @@ export = async function(fastify: FastifyInstance) {
             const winner_candidate = candidate[winner_index];
             console.log({winner_index, winner_candidate});
             
+
+            // NOTE: updaet roska_serials
+            {
+                const sql = PGDelegate.format(`
+                    UPDATE roska_serials
+                    SET mids = mids || {new_mid}
+                    WHERE sid = {sid};`, 
+                    {sid, new_mid: winner_candidate.mid});
+
+                console.log(sql);
+                
+                const {rowCount} = await Postgres.query(sql);
+                if (rowCount === 0) {
+                    return res.errorHandler(GroupError.NOT_PAST_BID_END_TIME);
+                }
+            }
 
             // NOTE: updaet roska_groups
             {

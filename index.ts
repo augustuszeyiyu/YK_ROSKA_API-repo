@@ -135,27 +135,23 @@ Promise.chain(async()=>{
 			callback(null, corsOptions)
 		}
 	})
-	.register(async(fastify, opts)=>{
+	.addHook('preHandler', async(req, res)=>{
+		req.time_milli = Date.now();
+		req.time = Math.floor(req.time_milli/1000);
 		
-		fastify.decorateReply('errorHandler', function(error_info:any, detail?:any) {
-			return this.status(error_info.status === undefined? 400: error_info.status).send({
-				code: error_info.code,
-				scope: this.request.routerPath,
-				msg: error_info.msg,
-				detail: detail
-			});
+		res.header('Access-Control-Allow-Origin', '*');
+	})
+	.decorateReply('errorHandler', function(error_info:any, detail?:any) {
+		return this.status(error_info.status === undefined? 400: error_info.status).send({
+			code: error_info.code,
+			scope: this.request.routerPath,
+			msg: error_info.msg,
+			detail: detail
 		});
-
-
+	})
+	.register(async(fastify, opts)=>{
 
 		fastify
-		.addHook('preHandler', async(req, res)=>{
-			res.header('Access-Control-Allow-Origin', '*');
-		})
-		.addHook('preHandler', async(req)=>{
-			req.time_milli = Date.now();
-			req.time = Math.floor(req.time_milli/1000);
-		})
 		.addHook('preHandler', async(req, res) => {
 			req.session = { source:'unkown', is_login:false };
 			
@@ -205,8 +201,8 @@ Promise.chain(async()=>{
 			req.session.raw_token = raw_token;
 			req.session.admin_level = user_info.admin_level;
 		})
-		.addHook('onError', async(req, reply, error)=>{
-			console.log(error);
+		.addHook('onError', async(req, res, error)=>{
+			console.error(error);
 		});
 
 
