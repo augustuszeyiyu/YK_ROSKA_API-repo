@@ -51,7 +51,7 @@ export = async function(fastify:FastifyInstance) {
 
 
 			let sql_count = `SELECT COUNT(*) `;
-			let sql = `SELECT u."uid", u."name", u."contact_home_number", u."contact_mobile_number", u."create_time" FROM "users" u `;
+			let sql = `SELECT u."uid", u."name", u."nid", u."contact_home_number", u."contact_mobile_number", u."create_time" FROM "users" u `;
 			const val:any[] = [];
 
 
