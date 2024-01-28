@@ -33,8 +33,8 @@ export = async function(fastify: FastifyInstance) {
 				emergency_contact_number: { type: 'string', pattern: '^[0-9]*$' },
 				emergency_contact_relation: { type: 'string' },
 				password: { type: 'string' },
-				referrer_nid: { type: 'string' },
-				volunteer_nid: { type: 'string' }
+				referrer_mobile_number: { type: 'string' },
+				volunteer_mobile_number: { type: 'string' }
 			},
 			required: [ 'nid', 'name', 'gender', 'birth_date', 'contact_mobile_number', 'password',
 						'bank_code', 'branch_code',  'bank_account_name', 'bank_account_number', 
@@ -69,7 +69,7 @@ export = async function(fastify: FastifyInstance) {
 			const { nid, name, gender, birth_date, address, line_id, contact_home_number, contact_mobile_number, 
 					bank_code, branch_code, bank_account_name, bank_account_number,
 					emergency_nid, emergency_contact, emergency_contact_number, emergency_contact_relation,
-					referrer_nid, volunteer_nid, password } = req.body;
+					referrer_mobile_number, volunteer_mobile_number, password } = req.body;
 			
 
 			const payload:Partial<User> = {	uid: TrimId.NEW.toString(32) };
@@ -154,14 +154,14 @@ export = async function(fastify: FastifyInstance) {
 				else													{ payload.emergency_contact_relation = emergency_contact_relation; }
 
 
-				if (referrer_nid !== undefined) 						{ 
-					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE nid=$1;', [referrer_nid]);
+				if (referrer_mobile_number !== undefined) 						{ 
+					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE contact_mobile_number=$1;', [referrer_mobile_number]);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
 					else 												{ payload.referrer_uid = row.uid; }
 				}
 
-				if (volunteer_nid !== undefined)						{ 
-					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE nid=$1;', [volunteer_nid]);
+				if (volunteer_mobile_number !== undefined)						{ 
+					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE contact_mobile_number=$1;', [volunteer_mobile_number]);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
 					else 												{ payload.volunteer_uid = row.uid; }
 				}

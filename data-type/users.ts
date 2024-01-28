@@ -29,7 +29,7 @@ export interface User {
 }
 
 export type User_Registr = Omit<User, 'relative_path'|'referrer_uid'|'referrer_path'|'volunteer_uid'|'volunteer_path'|'role'|'update_time'|'create_time'>&{
-    referrer_nid:User['nid'], volunteer_nid:User['nid']
+    referrer_mobile_number:User['contact_mobile_number'], volunteer_mobile_number:User['contact_mobile_number']
 };
 
 

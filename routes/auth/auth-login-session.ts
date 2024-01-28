@@ -105,7 +105,7 @@ export = async function(fastify:FastifyInstance) {
 					captcha:  		{ type: 'string' },
 				},
 				examples: [{
-					mobile_number: '0933095111',
+					mobile_number: '0933111111',
 					password: 'Abcd1234',
 					captcha: '123456'
 				}]
