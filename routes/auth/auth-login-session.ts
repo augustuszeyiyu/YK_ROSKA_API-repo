@@ -95,17 +95,17 @@ export = async function(fastify:FastifyInstance) {
 	**/
 	{
 		const schema = {
-			description: '使用身分證字號和密碼登入',
-			summary: '使用身分證字號和密碼登入',
+			description: '使用手機號碼和密碼登入',
+			summary: '使用手機號碼和密碼登入',
 			body: {
 				type: 'object',
                 properties: {
-					nid:      { type: 'string' },
-                    password: { type: 'string' },
-					captcha:  { type: 'string' },
+					mobile_number:  { type: 'string' },
+                    password: 		{ type: 'string' },
+					captcha:  		{ type: 'string' },
 				},
 				examples: [{
-					nid: 'A112345555',
+					mobile_number: '0933095111',
 					password: 'Abcd1234',
 					captcha: '123456'
 				}]
@@ -120,13 +120,13 @@ export = async function(fastify:FastifyInstance) {
 			login_time:epoch;
 		};
 
-		fastify.post<{Body:{nid:User['nid'], password:User['password'], captcha:string}, Reply:APIResponse<ResponseType>}>('/login', {schema}, async(req, res)=>{
-			const {nid, password, captcha} = req.body;
+		fastify.post<{Body:{mobile_number:User['contact_mobile_number'], password:User['password'], captcha:string}, Reply:APIResponse<ResponseType>}>('/login', {schema}, async(req, res)=>{
+			const {mobile_number, password, captcha} = req.body;
 			
 			
 			{
-				if ( nid === undefined ) {
-					return res.errorHandler(LoginError.NID_REQUIRED)
+				if ( mobile_number === undefined ) {
+					return res.errorHandler(LoginError.MOBILE_NUMBER_REQUIRED);
 				}
 
 				if ( password === undefined ) {
@@ -149,12 +149,12 @@ export = async function(fastify:FastifyInstance) {
 			let user_id:string, user_role:number;
 			{
 				try {
-					const {rows:[USER]} = await Postgres.query<{uid:User['uid'], role:User['role']}>(`SELECT uid, role FROM users WHERE nid=$1;`, [nid]);
+					const {rows:[USER]} = await Postgres.query<{nid:User['nid'],  uid:User['uid'], role:User['role']}>(`SELECT nid, uid, role FROM users WHERE contact_mobile_number=$1;`, [mobile_number]);
 					if (USER === undefined) {
 						return res.errorHandler( LoginError.INVALID_ACCOUNT_OR_PASSWORD );
 					}
 					// NOTE: verify user password
-					const {rows:[IS_VALID]} = await Postgres.query<{uid:User['uid'], role:User['role']}>(`SELECT (verify_password($1, $2)).*;`, [nid, password]);				
+					const {rows:[IS_VALID]} = await Postgres.query<{uid:User['uid'], role:User['role']}>(`SELECT (verify_password($1, $2)).*;`, [USER.nid, password]);				
 					if (IS_VALID === undefined) {
 						return res.errorHandler( UserError.INVALID_PASSWORD );
 					}

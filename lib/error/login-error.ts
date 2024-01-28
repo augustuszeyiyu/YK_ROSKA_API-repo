@@ -7,6 +7,10 @@ export class LoginError {
 		status:400, code:'api#login#nid-required',
 		msg:'NID Required!'
 	};
+	public static MOBILE_NUMBER_REQUIRED:HuntErrorItem = {
+		status:400, code:'api#login#mobile-number-required',
+		msg:'Mobile number Required!'
+	};
 	public static PASSWORD_REQUIRED:HuntErrorItem = {
 		status:400, code:'api#login#password-required',
 		msg:'Password Required!'
