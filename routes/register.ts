@@ -154,14 +154,14 @@ export = async function(fastify: FastifyInstance) {
 				else													{ payload.emergency_contact_relation = emergency_contact_relation; }
 
 
-				if (referrer_mobile_number !== undefined) 						{ 
+				if (referrer_mobile_number !== undefined) 				{ 
 					const {rows:[row]} = await Postgres.query<User>('SELECT * FROM users WHERE contact_mobile_number=$1;', [referrer_mobile_number]);
 					console.log('referrer_mobile_number', row);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
 					else 												{ payload.referrer_uid = row.uid; }
 				}
 
-				if (volunteer_mobile_number !== undefined)						{ 
+				if (volunteer_mobile_number !== undefined)				{ 
 					const {rows:[row]} = await Postgres.query<User>('SELECT * FROM users WHERE contact_mobile_number=$1;', [volunteer_mobile_number]);
 					console.log('volunteer_mobile_number', row);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
