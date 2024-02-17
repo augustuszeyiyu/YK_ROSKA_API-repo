@@ -155,13 +155,13 @@ export = async function(fastify: FastifyInstance) {
 
 
 				if (referrer_mobile_number !== undefined) 						{ 
-					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE contact_mobile_number=$1;', [referrer_mobile_number]);
+					const {rows:[row]} = await Postgres.query<User>('SELECT * FROM users WHERE contact_mobile_number=$1;', [referrer_mobile_number]);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
 					else 												{ payload.referrer_uid = row.uid; }
 				}
 
 				if (volunteer_mobile_number !== undefined)						{ 
-					const {rows:[row]} = await Postgres.query('SELECT * FROM users WHERE contact_mobile_number=$1;', [volunteer_mobile_number]);
+					const {rows:[row]} = await Postgres.query<User>('SELECT * FROM users WHERE contact_mobile_number=$1;', [volunteer_mobile_number]);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
 					else 												{ payload.volunteer_uid = row.uid; }
 				}
