@@ -5,6 +5,7 @@ import { RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { GroupError } from "/lib/error/gruop-error";
+import { UserError } from "/lib/error";
 
 
 type PaginateCursorUser = PaginateCursor<RoskaSerials[]>;
@@ -18,7 +19,7 @@ export = async function(fastify: FastifyInstance) {
             body: {
                 type: 'object',
 				properties: {
-                    uid: { type: 'string' },
+                    contact_mobile_number: { type: 'string' },
                     sid: { type: 'string' }
                 },
                 required: ['uid', 'sid']
@@ -26,8 +27,8 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{uid:User['uid'], sid:RoskaSerials['sid']}}>('/group/member', {schema}, async (req, res)=>{
-            const {uid, sid} = req.body;
+        fastify.post<{Body:{contact_mobile_number:User['contact_mobile_number'], sid:RoskaSerials['sid']}}>('/group/member', {schema}, async (req, res)=>{
+            const {contact_mobile_number, sid} = req.body;
 
 
             const {rows: [roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
@@ -35,6 +36,13 @@ export = async function(fastify: FastifyInstance) {
                 return res.errorHandler(GroupError.SID_NOT_FOUND);
             }
 
+
+            
+            const {rows:[USER]} = await Postgres.query<User>(`SELECT * FROM users WHERE contact_mobile_number=$1;`, [contact_mobile_number]);
+            if (USER === undefined) {
+                return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS);
+            }
+            
 
             const {rows: [member_count]} = await Postgres.query<{count:num_str}>(`
                 SELECT COALESCE(COUNT(m.mid), 0) AS count
@@ -52,7 +60,7 @@ export = async function(fastify: FastifyInstance) {
             const next = `${total_members}`.padStart(2, '0');
             const mid = `${sid}-${next}`;
            
-            const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
+            const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid:USER.uid});
     
             await Postgres.query(sql);
 
