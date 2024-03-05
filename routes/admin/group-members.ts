@@ -69,6 +69,73 @@ export = async function(fastify: FastifyInstance) {
 			res.status(200).send({});
 		});
     }
+    /* 新增多位會員入會 */
+    {
+        const schema = {
+			description: '新增多位會員入會',
+			summary: '新增多位會員入會',
+            body: {
+                type: 'object',
+				properties: {
+                    sid: { type: 'string' },
+                    contact_mobile_numbers: { 
+                        type: 'array', 
+                        items: {type:'string'} 
+                    },
+                },
+                required: ['uid', 'sid']
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.post<{Body:{contact_mobile_numbers:User['contact_mobile_number'][], sid:RoskaSerials['sid']}}>('/group/members', {schema}, async (req, res)=>{
+            const {contact_mobile_numbers, sid} = req.body;
+
+
+            const {rows: [roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
+            if (roska_serial === undefined) {
+                return res.errorHandler(GroupError.SID_NOT_FOUND);
+            }
+
+
+            
+            const {rows:USERS} = await Postgres.query<User>(`SELECT * FROM users WHERE contact_mobile_number = ANY($1);`, [contact_mobile_numbers]);
+            if (USERS.length === 0) {
+                return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS);
+            }
+            
+
+            const {rows: [member_count]} = await Postgres.query<{count:num_str}>(`
+                SELECT COALESCE(COUNT(m.mid), 0) AS count
+                FROM roska_members m
+                LEFT JOIN roska_serials s ON m.sid = s.sid
+                WHERE m.sid = $1;`, [sid]);
+            
+            
+            let total_members = Number(member_count.count);
+            if (roska_serial.member_count === total_members) {
+                return res.errorHandler(GroupError.GROUP_SERIAL_IS_FULL);
+            }
+
+            let insert_sql:string[] = [];
+            for (let index = 0; index < USERS.length; index++) {
+                const next = `${total_members+index}`.padStart(2, '0');
+                const mid = `${sid}-${next}`;
+                
+                const USER = USERS[index];
+                const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid:USER.uid});
+                insert_sql.push(sql);
+            }
+        
+            
+    
+            await Postgres.query(insert_sql.join(', '));
+
+          
+            
+			res.status(200).send({});
+		});
+    }
     /** 會組序號 sid下的會員列表 **/
     {
         const schema = {
