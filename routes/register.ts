@@ -21,7 +21,6 @@ export = async function(fastify: FastifyInstance) {
 				gender: { type: 'string' },
 				birth_date: { type: 'string' },
 				address: { type: 'string' },
-				line_id: { type: 'string' },
 				contact_home_number: { type: 'string', pattern: '^[0-9]*$' },
 				contact_mobile_number: { type: 'string', pattern: '^[0-9]*$' },
 				bank_code: { type: 'string', pattern: '^[0-9]*$' },
@@ -50,7 +49,6 @@ export = async function(fastify: FastifyInstance) {
 					"gender": "M",
 					"birth_date": "1930-08-28",
 					"address": "台北市北投區光明路二段二樓",
-					"line_id": "Richard",
 					"contact_home_number": "0228233333",
 					"contact_mobile_number": "0933111111",
 					"bank_code": "004",
@@ -61,6 +59,7 @@ export = async function(fastify: FastifyInstance) {
 					"emergency_contact": "王大明",
 					"emergency_contact_number": "0935088881",
 					"emergency_contact_relation": "父子",
+					"referrer_mobile_number": '0966286789',
 					"password": "Abcd1234"
 				}]
 			}),
