@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS "users" (
 	gender					        VARCHAR(1)			NOT NULL,
 	birth_date 				        DATE 				NOT NULL,
     address                         VARCHAR(100)        NOT NULL DEFAULT '',
-    line_id                         VARCHAR(50)         NOT NULL DEFAULT '',
     contact_home_number			    VARCHAR(12)			NOT NULL DEFAULT '',
     contact_mobile_number			VARCHAR(12)			NOT NULL,
     role						    SMALLINT			NOT NULL DEFAULT 0,
@@ -59,10 +58,6 @@ RETURNS trigger AS $$
 BEGIN
 
     NEW.nid = UPPER(NEW.nid);
-
-    IF NEW.line_id IS NOT NULL THEN
-        NEW.line_id = LOWER(NEW.line_id);
-    END IF;
 
  	IF NEW.contact_mobile_number ~ '^(09\d{2}-\d{3}-\d{3})$' THEN
         -- Format for mobile phone numbers (e.g., 0905-095-111)

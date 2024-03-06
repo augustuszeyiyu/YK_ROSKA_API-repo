@@ -125,7 +125,6 @@ export = async function(fastify: FastifyInstance) {
                 p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
                 ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
-            required:['o', 'p', 'ps'],
         };
         const schema = {
 			description: '全部會期 gid 列表',
@@ -153,7 +152,7 @@ export = async function(fastify: FastifyInstance) {
 
 
             const {o, p, ps} = req.query;
-            const _order = o.trim().toUpperCase();
+            const _order = o === undefined? 'ASC': o.trim().toUpperCase();
 			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
 			const _PageSize = !ps? 30 : (ps && parseInt(ps)<30? 30: (ps && parseInt(ps) > 150 ? 150 : parseInt(ps)));
   			const _PageOffset = ((_PageNumber-1) * _PageSize);

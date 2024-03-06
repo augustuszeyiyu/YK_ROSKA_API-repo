@@ -41,7 +41,6 @@ export = async function(fastify: FastifyInstance) {
 				type: 'object',
 				properties: {
 					address: { type: 'string' },
-					line_id: { type: 'string' },
 					contact_home_number: { type: 'string' },
 					contact_mobile_number: { type: 'string' },
 					bank_code: { type: 'string', pattern: '^[0-9]*$' },
@@ -69,7 +68,7 @@ export = async function(fastify: FastifyInstance) {
 				return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS);
 			}
 
-			const { address, line_id, contact_home_number, contact_mobile_number, bank_code, branch_code, bank_account_name, bank_account_number, 
+			const { address, contact_home_number, contact_mobile_number, bank_code, branch_code, bank_account_name, bank_account_number, 
 					emergency_nid, emergency_contact, emergency_contact_number, emergency_contact_relation} = req.body;
 			
 
@@ -81,8 +80,6 @@ export = async function(fastify: FastifyInstance) {
 
 
 				if (address !== undefined)								{ payload.address = address; }
-	
-				if (line_id !== undefined)								{ payload.line_id = line_id; }
 	
 				if (contact_home_number !== undefined) 					{					
 					if (Main_Island_Home_Number_Pattern.test(contact_home_number) === false) {

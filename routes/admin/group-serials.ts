@@ -150,7 +150,6 @@ export = async function(fastify: FastifyInstance) {
                 p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
                 ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
-            required:['o', 'p', 'ps'],
         };
         const schema = {
 			description: '新成立會組列表',
@@ -177,7 +176,7 @@ export = async function(fastify: FastifyInstance) {
             }
 
             const {o, p, ps} = req.query;
-            const _order = o.toUpperCase();
+            const _order = o === undefined? 'ASC': o.trim().toUpperCase();
 			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
 			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
   			const _PageOffset = ((_PageNumber-1) * _PageSize);
@@ -250,7 +249,6 @@ export = async function(fastify: FastifyInstance) {
                 p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
                 ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
-            required:['o', 'p', 'ps'],
         };
         const schema = {
 			description: '進行中會組列表',
@@ -277,7 +275,7 @@ export = async function(fastify: FastifyInstance) {
             }
 
             const {o, p, ps} = req.query;
-            const _order = o.trim().toUpperCase();
+            const _order = o === undefined? 'ASC': o.trim().toUpperCase();
 			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
 			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
   			const _PageOffset = ((_PageNumber-1) * _PageSize);
@@ -350,7 +348,6 @@ export = async function(fastify: FastifyInstance) {
                 p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
                 ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
-            required:['o', 'p', 'ps'],
         };
         const schema = {
 			description: '已過期會組列表',
@@ -377,7 +374,7 @@ export = async function(fastify: FastifyInstance) {
             }
 
             const {o, p, ps} = req.query;
-            const _order = o.trim().toUpperCase();
+            const _order = o === undefined? 'ASC': o.trim().toUpperCase();
 			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
 			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
   			const _PageOffset = ((_PageNumber-1) * _PageSize);
@@ -453,7 +450,6 @@ export = async function(fastify: FastifyInstance) {
                     p:      { type: 'string' },
                     ps:     { type: 'string' },
                 },
-                required:['o', 'p', 'ps'],
                 examples:[
                     { o:'ASC', p:'1', ps:'10' },
                     { o:'DESC', p:'2', ps:'10' }
@@ -468,7 +464,6 @@ export = async function(fastify: FastifyInstance) {
                 p:  { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
                 ps: { type: 'string', pattern: INT_POSSITIVE_STR_FORMAT.source },
             },
-            required:['o', 'p', 'ps'],
         };
         const PayloadValidator = $.ajv.compile(schema_query);
 		
@@ -483,7 +478,7 @@ export = async function(fastify: FastifyInstance) {
             }
 
             const {o, p, ps} = req.query;
-            const _order = o.trim().toUpperCase();
+            const _order = o === undefined? 'ASC': o.trim().toUpperCase();
 			const _PageNumber = p && parseInt(p)>0? parseInt(p) : 1;
 			const _PageSize = !ps? 50 : (ps && parseInt(ps)<10? 10: (ps && parseInt(ps) > 50 ? 50 : parseInt(ps)));
   			const _PageOffset = ((_PageNumber-1) * _PageSize);
