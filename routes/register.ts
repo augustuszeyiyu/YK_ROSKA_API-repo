@@ -74,6 +74,7 @@ export = async function(fastify: FastifyInstance) {
 			const payload:Partial<User> = {	uid: TrimId.NEW.toString(32) };
 
 
+			let referrer_name = '', volunteer_name = '';
 			// handle column errors
 			{
 				const birth_date_pattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -157,14 +158,14 @@ export = async function(fastify: FastifyInstance) {
 					const {rows:[row]} = await Postgres.query<User>('SELECT * FROM users WHERE contact_mobile_number=$1;', [referrer_mobile_number]);
 					console.log('referrer_mobile_number', row);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
-					else 												{ payload.referrer_uid = row.uid; }
+					else 												{ payload.referrer_uid = row.uid; referrer_name = row.name; }
 				}
 
 				if (volunteer_mobile_number !== undefined)				{ 
 					const {rows:[row]} = await Postgres.query<User>('SELECT * FROM users WHERE contact_mobile_number=$1;', [volunteer_mobile_number]);
 					console.log('volunteer_mobile_number', row);
 					if (row === undefined) 								{ return res.errorHandler(UserError.USER_NOT_EXISTS); }
-					else 												{ payload.volunteer_uid = row.uid; }
+					else 												{ payload.volunteer_uid = row.uid; volunteer_name = row.name; }
 				}
 			}
 
@@ -183,9 +184,12 @@ export = async function(fastify: FastifyInstance) {
 			await Postgres.query(`UPDATE users SET password = $2 WHERE uid=$1;`, [payload.uid, password]);
 
 
-			if (rowCount === 1)  return res.status(200).send({});
-			else 				 return res.errorHandler(BaseError.DB_INSERTION_FAILURE);
-			
+			if (rowCount === 1)  {
+				return res.status(200).send({referrer_name, volunteer_name});
+			}
+			else {
+				return res.errorHandler(BaseError.DB_INSERTION_FAILURE);
+			}			
 		});
 	}
 };
