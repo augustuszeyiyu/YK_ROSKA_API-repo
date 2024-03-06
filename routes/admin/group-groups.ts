@@ -160,7 +160,7 @@ export = async function(fastify: FastifyInstance) {
 
             
 
-			let sql_count = `SELECT COUNT(*) FROM roska_groups;`;
+			let sql_count = `SELECT COUNT(*) FROM roska_groups `;
 			let sql = `
                 SELECT  *, 
                         (CASE

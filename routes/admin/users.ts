@@ -50,7 +50,7 @@ export = async function(fastify:FastifyInstance) {
   			const _PageOffset = ((_PageNumber-1) * _PageSize);
 
 
-			let sql_count = `SELECT COUNT(*) `;
+			let sql_count = `SELECT COUNT(*) from users `;
 			let sql = `SELECT u."uid", u."name", u."nid", u."contact_home_number", u."contact_mobile_number", u."create_time" FROM "users" u `;
 			const val:any[] = [];
 
