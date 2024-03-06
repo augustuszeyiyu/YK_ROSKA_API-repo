@@ -25,10 +25,21 @@ export = async function(fastify: FastifyInstance) {
 			const {uid} = req.session.token!;
 			
 
-			const {rows:[row]} = await Postgres.query(`SELECT * FROM users WHERE uid=$1;`, [uid]);
-			delete row.password;
+			let {rows:[owner]} = await Postgres.query<Partial<User>>(`SELECT * FROM users WHERE uid=$1;`, [uid]);
+			delete owner.password;
 
-			res.status(200).send(row);
+		
+			if (owner.referrer_uid !== '') {
+				const {rows:[row]} = await Postgres.query<{name: User['name']}>(`SELECT name FROM users WHERE uid=$1;`, [owner.referrer_uid]);
+				owner = Object.assign(owner, {referrer_name: owner.name});
+			}
+			
+			if (owner.volunteer_uid !== '') {
+				const {rows:[row]} = await Postgres.query<{name: User['name']}>(`SELECT name FROM users WHERE uid=$1;`, [owner.volunteer_uid]);
+				owner = Object.assign(owner, {volunteer_name: owner.name});
+			}
+
+			res.status(200).send(owner);
 		});
 	}
 
