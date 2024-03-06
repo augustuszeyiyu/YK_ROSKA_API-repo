@@ -109,7 +109,6 @@ export = async function(fastify: FastifyInstance) {
 				if (address === undefined)	{ return res.errorHandler(UserError.ADDRESS_IS_REQUIRED); }
 				else						{ payload.address = address; }
 
-				if (line_id !== '' && line_id !== undefined)	{ payload.line_id = line_id; }
 
 				if (birth_date === undefined)							{ return res.errorHandler(UserError.DOB_IS_REQUIRED); }
 				else
