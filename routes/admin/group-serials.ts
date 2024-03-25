@@ -91,7 +91,7 @@ export = async function(fastify: FastifyInstance) {
             
             // NOTE: get year and month
             const inputDate = new Date(bid_start_time);
-            const formattedDate = inputDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }).replace(/\//g, '');
+            const formattedDate = inputDate.toLocaleDateString('en-US', { month: '2-digit' }).replace(/\//g, '');
             console.log({bid_start_time, inputDate, formattedDate}); // Output: 2311
 
             const {rows:[row_bit_time]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
