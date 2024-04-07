@@ -1,6 +1,6 @@
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
+import { RoskaBids, RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { BaseError, LoginError, UserError } from '/lib/error';
@@ -25,16 +25,112 @@ export = async function(fastify: FastifyInstance) {
 
             const {uid} = req.session.token!;
 
-            const {rows} = await Postgres.query<{win_time:RoskaGroups['win_time']}>(`
-                SELECT g.win_time
-                FROM roska_groups g
-                LEFT JOIN roska_members m ON g.sid = m.sid
-                WHERE m.uid = $1
-                GROUP BY g.win_time
-                ORDER BY win_time DESC`, [uid]);
+            const {rows:SYSVARS} = await Postgres.query<SysVar>(`
+                SELECT * 
+                FROM sysvar 
+                WHERE key in ($1, $2, $3)
+                ORDER BY key ASC;`, ['handling_fee', 'transition_fee', 'Interest_bonus']);
+
+            const handling_fee = Number(SYSVARS[0].value);
+            const transition_fee = Number(SYSVARS[1].value);
+            const Interest_bonus = Number(SYSVARS[2].value);
 
 
-            return res.status(200).send(rows);
+            const {rows:user_transition_info} = await Postgres.query<{
+                sid:RoskaMembers['sid'], 
+                basic_unit_amount: RoskaSerials['basic_unit_amount'],
+                cycles:RoskaSerials['cycles'],
+                transition:RoskaMembers['transition'], 
+                transit_to:RoskaMembers['transit_to'],
+                transit_gid:RoskaMembers['transit_gid'],
+                total: number,
+                group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
+            }>(`
+                SELECT DISTINCT 
+                    m.sid, 
+                    s.basic_unit_amount,
+                    s.cycles,
+                    m.transition,
+                    m.transit_to,
+                    m.transit_gid,
+                    0::integer as total,
+                    COALESCE(
+                        (
+                            SELECT
+                                jsonb_agg( jsonb_build_object(
+                                    'gid', rg.gid, 
+                                    'sid', rg.sid,
+                                    'mid', rg.mid,
+                                    'uid', rg.uid,
+                                    'bid_amount', rg.bid_amount,
+                                    'win', (
+                                        CASE WHEN 
+                                            rg.uid = m.uid
+                                        THEN true
+                                        ELSE false
+                                        END),
+                                    'subtotal', 0::integer
+                                ) ORDER BY rg.gid, rg.sid)
+                            FROM 
+                                roska_groups rg
+                            WHERE 
+                                rg.sid = m.sid AND rg.mid <> ''
+                        ), '[]'::jsonb) AS group_info
+                FROM 
+                    roska_members m
+                WHERE 
+                    m.uid = $1
+                ORDER BY 
+                    m.sid;`, [uid]);
+
+
+            for (const t of user_transition_info) {
+                let dead = false;
+                for (const g of t.group_info) {
+                    
+                    if (t.transition === 0) {
+                        if (g.gid!.indexOf('-t00') > 1) {
+                            g.subtotal =  Number(t.basic_unit_amount);
+                            t.total += g.subtotal;
+                        }
+                        else
+                        if (dead === false) {
+                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
+                            t.total += g.subtotal;
+                        }
+                        if (dead === true) {
+                            g.subtotal =  Number(t.basic_unit_amount);
+                            t.total += g.subtotal;
+                        }
+                        else 
+                        if (g.win === true) {
+                            dead = true;
+                            continue;
+                        }
+                    }
+                    else
+                    if (t.transition === 1) {
+                        if (g.gid!.indexOf('-t00') > 1) {
+                            g.subtotal =  Number(t.basic_unit_amount);
+                            t.total += g.subtotal;
+                        }
+                        else
+                        if (dead === false) {
+                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
+                            t.total += g.subtotal;
+                        }
+                        else 
+                        if (g.win === true) {
+                            dead = true;
+                            g.subtotal = (t.cycles * handling_fee) - transition_fee + Interest_bonus;
+                            t.total += g.subtotal;
+                            break;
+                        }
+                    }                     
+                }                
+            }
+
+            return res.status(200).send(user_transition_info);
         });
     }
     /** 各會期結算 **/
@@ -43,58 +139,138 @@ export = async function(fastify: FastifyInstance) {
 			description: '各會期結算',
 			summary: '各會期結算',
             params: {
-                win_time: {type: 'string'}
+                type: 'object',
+                properties:{
+                    year_month: {type: 'string'}
+                },
+                examples: [{year_month:'2023-06'}]
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{win_time:RoskaGroups['win_time']}}>('/group/serial/settlement/:win_time', {schema}, async (req, res)=>{
+        fastify.get<{Params:{year_month:string}}>('/group/serial/settlement/:year_month', {schema}, async (req, res)=>{
             if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
 
             const {uid} = req.session.token!;
-            const {win_time} = req.params;
+            const {year_month} = req.params;
 
 
             const {rows:SYSVARS} = await Postgres.query<SysVar>(`
                 SELECT * 
                 FROM sysvar 
-                WHERE key in ($1, $2)
-                ORDER BY key ASC;`, ['handling_fee', 'transition_fee']);
+                WHERE key in ($1, $2, $3)
+                ORDER BY key ASC;`, ['handling_fee', 'transition_fee', 'Interest_bonus']);
 
             const handling_fee = Number(SYSVARS[0].value);
             const transition_fee = Number(SYSVARS[1].value);
-
-            const {rows} = await Postgres.query<{win_time:RoskaGroups['win_time']}>(`
-                SELECT g.gid, g.win_time
-                FROM roska_groups g
-                LEFT JOIN roska_members m ON g.sid = m.sid
-                WHERE m.uid = $1
-                GROUP BY g.gid, g.win_time
-                ORDER BY win_time DESC`, [uid]);
+            const Interest_bonus = Number(SYSVARS[2].value);
 
 
-            const {rows:MEMBER_LIST} = await Postgres.query<RoskaGroups>(`
-                SELECT md.*
-                FROM roska_members, 
-                    jsonb_to_recordset(roska_members.details) AS md (
-                        cycles SMALLINT,
-                        mid VARCHAR(20),
-                        uid VARCHAR(32),
-                        gid VARCHAR(17),
-                        sid VARCHAR(13),
-                        earn DECIMAL,
-                        pay  DECIMAL,
-                        handling_fee   DECIMAL,
-                        transition_fee DECIMAL
-                    )
-                INNER JOIN roska_groups g ON g.gid = md.gid AND g.sid = md.sid
-                WHERE md.uid = $1 AND g.win_time like $2;`, [uid, `${win_time}%`]);
+            const input_date = year_month.split('-');
+            const year = Number(input_date[0]);
+            const month = Number(input_date[1]);
 
-            
-  
-            return res.status(200).send(MEMBER_LIST);
+
+            const {rows:user_transition_info} = await Postgres.query<{
+                sid:RoskaMembers['sid'], 
+                basic_unit_amount: RoskaSerials['basic_unit_amount'],
+                cycles:RoskaSerials['cycles'],
+                transition:RoskaMembers['transition'], 
+                transit_to:RoskaMembers['transit_to'],
+                transit_gid:RoskaMembers['transit_gid'],
+                total: number,
+                group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
+            }>(`
+                SELECT DISTINCT 
+                    m.sid, 
+                    s.basic_unit_amount,
+                    s.cycles,
+                    m.transition,
+                    m.transit_to,
+                    m.transit_gid,
+                    0::integer as total,
+                    COALESCE(
+                        (
+                            SELECT
+                                jsonb_agg( jsonb_build_object(
+                                    'gid', rg.gid, 
+                                    'sid', rg.sid,
+                                    'mid', rg.mid,
+                                    'uid', rg.uid,
+                                    'bid_amount', rg.bid_amount,
+                                    'win', (
+                                        CASE WHEN 
+                                            rg.uid = m.uid
+                                        THEN true
+                                        ELSE false
+                                        END),
+                                    'subtotal', 0::integer
+                                ) ORDER BY rg.gid, rg.sid)
+                            FROM 
+                                roska_groups rg
+                            WHERE 
+                                rg.sid = m.sid AND 
+                                rg.mid <> '' AND 
+                                EXTRACT(YEAR FROM win_time) <= $2 AND
+                                EXTRACT(MONTH FROM win_time) <= $3
+                        ), '[]'::jsonb) AS group_info
+                FROM 
+                    roska_members m
+                WHERE 
+                    m.uid = '01iredbil8mrobjqpta5k5rq70'
+                ORDER BY 
+                    m.sid;`, [uid, year, month]);
+
+
+            for (const t of user_transition_info) {
+                let dead = false;
+                for (const g of t.group_info) {
+                    
+                    if (t.transition === 0) {
+                        if (g.gid!.indexOf('-t00') > 1) {
+                            g.subtotal =  Number(t.basic_unit_amount);
+                            t.total += g.subtotal;
+                        }
+                        else
+                        if (dead === false) {
+                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
+                            t.total += g.subtotal;
+                        }
+                        if (dead === true) {
+                            g.subtotal =  Number(t.basic_unit_amount);
+                            t.total += g.subtotal;
+                        }
+                        else 
+                        if (g.win === true) {
+                            dead = true;
+                            continue;
+                        }
+                    }
+                    else
+                    if (t.transition === 1) {
+                        if (g.gid!.indexOf('-t00') > 1) {
+                            g.subtotal =  Number(t.basic_unit_amount);
+                            t.total += g.subtotal;
+                        }
+                        else
+                        if (dead === false) {
+                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
+                            t.total += g.subtotal;
+                        }
+                        else 
+                        if (g.win === true) {
+                            dead = true;
+                            g.subtotal = (t.cycles * handling_fee) - transition_fee + Interest_bonus;
+                            t.total += g.subtotal;
+                            break;
+                        }
+                    }                     
+                }                
+            }
+
+            return res.status(200).send(user_transition_info);
         });
     }
 	/** 新成立會組列表 **/
@@ -258,7 +434,7 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(rows);
         });
     } 
-
+    /** 下標 **/
     {
         const schema = {
 			description: '下標',
@@ -274,7 +450,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{gid:RoskaMembers['gid'], bid_amount:RoskaMembers['bid_amount']}}>('/group/bid', {schema}, async (req, res)=>{
+        fastify.post<{Body:{gid:RoskaBids['gid'], bid_amount:RoskaBids['bid_amount']}}>('/group/bid', {schema}, async (req, res)=>{
             
             const {uid}:{uid:User['uid']} = req.session.token!;
 
@@ -310,7 +486,7 @@ export = async function(fastify: FastifyInstance) {
                     bid_amount
                 });
 
-            const {rows:[row]} = await Postgres.query(sql);
+            const {rows:[row]} = await Postgres.query<RoskaBids>(sql);
 
             return res.status(200).send(row);
         });   

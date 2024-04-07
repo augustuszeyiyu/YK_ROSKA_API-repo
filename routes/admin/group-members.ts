@@ -19,17 +19,16 @@ export = async function(fastify: FastifyInstance) {
             body: {
                 type: 'object',
 				properties: {
-                    contact_mobile_number: { type: 'string' },
-                    sid: { type: 'string' }
+                    sid:                    { type: 'string' },
+                    contact_mobile_number:  { type: 'string' }                    
                 },
-                required: ['sid']
+                required: ['sid', 'contact_mobile_number']
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{contact_mobile_number:User['contact_mobile_number'], sid:RoskaSerials['sid']}}>('/group/member', {schema}, async (req, res)=>{
-            const {contact_mobile_number, sid} = req.body;
-
+        fastify.post<{Body:{sid:RoskaSerials['sid'], contact_mobile_number:User['contact_mobile_number']}}>('/group/member', {schema}, async (req, res)=>{
+            const {sid, contact_mobile_number} = req.body;
 
             const {rows: [roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
             if (roska_serial === undefined) {
@@ -83,13 +82,18 @@ export = async function(fastify: FastifyInstance) {
                         items: {type:'string'} 
                     },
                 },
-                required: ['sid']
+                required: ['sid', 'contact_mobile_numbers']
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{contact_mobile_numbers:User['contact_mobile_number'][], sid:RoskaSerials['sid']}}>('/group/members', {schema}, async (req, res)=>{
-            const {contact_mobile_numbers, sid} = req.body;
+        fastify.post<{Body:{ sid:RoskaSerials['sid'], contact_mobile_numbers:User['contact_mobile_number'][]}}>('/group/members', {schema}, async (req, res)=>{
+            const {sid, contact_mobile_numbers} = req.body;
+
+
+            if (contact_mobile_numbers === undefined || contact_mobile_numbers.length === 0) {
+                return res.errorHandler(UserError.MOBILE_PHONE_IS_REQUIRED);
+            }
 
 
             const {rows: [roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);

@@ -51,13 +51,13 @@ export interface RoskaMembers {
     gid: RoskaGroups['gid'],
     sid: RoskaGroups['sid'],
     uid: User['uid'],
-    bid_amount: number,
     win_amount: boolean,
     win_time: string,
+    transition: number,
+    transit_to: User['uid'],
+    transit_gid: RoskaGroups['gid'],
     details: {gid: RoskaGroups['gid'], earn:number, pay:number}[],
     installment_deadline: string,
-    joing_time: string,
-    assignment_path: string,
     update_time: string,
     create_time: string,
 }
@@ -67,5 +67,5 @@ export interface RoskaCandidate {
     mid:RoskaMembers['mid'], 
     gid:RoskaMembers['gid'], 
     sid:RoskaMembers['sid'], 
-    bid_amount:RoskaMembers['bid_amount']
+    bid_amount:RoskaGroups['bid_amount']
 }
