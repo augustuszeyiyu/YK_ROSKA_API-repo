@@ -91,7 +91,7 @@ export = async function(fastify: FastifyInstance) {
             
             // NOTE: get year and month
             const inputDate = new Date(bid_start_time);
-            const formattedDate = inputDate.toLocaleDateString('en-US', { month: '2-digit' }).replace(/\//g, '');
+            const formattedDate = inputDate.toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' }).replace(/\//g, '');
             console.log({bid_start_time, inputDate, formattedDate}); // Output: 2311
 
             const {rows:[row_bit_time]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
@@ -285,7 +285,20 @@ export = async function(fastify: FastifyInstance) {
                 SELECT COUNT(*) FROM roska_serials 
                 WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time;`;
             let sql = `
-                SELECT * FROM roska_serials 
+                SELECT *, 
+                    (
+                        SELECT gid 
+                        FROM roska_groups
+                        WHERE sid = s.sid AND mid <> ''
+                        ORDER BY gid DESC LIMIT 1
+                    ) as prev_gid, 
+                    (
+                        SELECT gid
+                        FROM roska_groups
+                        WHERE sid = s.sid AND mid = ''
+                        ORDER BY gid ASC LIMIT 1
+                    ) as next_gid 
+                FROM roska_serials s
                 WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time
                 ORDER BY sid ${_order} `;
             const val:any[] = [];

@@ -179,7 +179,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{gid:RoskaMembers['gid'], bid_amount:RoskaMembers['bid_amount']}}>('/group/bid', {schema}, async (req, res)=>{
+        fastify.post<{Body:{gid:RoskaMembers['gid'], bid_amount:RoskaMembers['bid_amount']}}>('/group/member/bid', {schema}, async (req, res)=>{
             
             const {uid}:{uid:User['uid']} = req.session.token!;
 
@@ -220,5 +220,29 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(row);
         });   
     }
+    /** 會員轉讓 **/
+    {
+        const schema = {
+			description: '會員轉讓 mid',
+			summary: '會員轉讓 mid',
+            params: {
+                type: 'object',
+                properties:{
+                    sid: {type: 'string'}
+                },
+                required:["sid"],
+            },
+            security: [{ bearerAuth: [] }],
+		};
 
+        fastify.post<{Params:{sid:RoskaMembers['sid']}}>('/group/member/transition/:sid', {schema}, async (req, res)=>{
+            const {uid}:{uid:User['uid']} = req.session.token!;
+
+            const {sid} = req.params;
+            
+            await Postgres.query<RoskaSerials>(`UPDATE roska_members SET transition = 1 WHERE sid=$1 AND uid=$2;`, [sid, uid]);
+            
+            return res.status(200).send({});
+        });
+    }
 };

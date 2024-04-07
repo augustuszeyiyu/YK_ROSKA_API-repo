@@ -164,13 +164,11 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(rows);
         });
     }
-
-
     /** 刪除會員 **/
     {
         const schema = {
-			description: '刪除會組序號 sid',
-			summary: '刪除會組序號 sid',
+			description: '刪除會組序號 mid',
+			summary: '刪除會組序號 mid',
             params: {
                 type: 'object',
                 properties:{
@@ -188,6 +186,33 @@ export = async function(fastify: FastifyInstance) {
             await Postgres.query<RoskaSerials>(`DELETE FROM roska_members WHERE mid=$1;`, [mid]);
             
 
+            return res.status(200).send({});
+        });
+    }
+    /** 會員轉讓 **/
+    {
+        const schema = {
+			description: '多名會員轉讓',
+			summary: '多名會員轉讓',
+            body: {
+                type: 'object',
+                properties:{
+                    sid:  {type: 'string'},
+                    mids: {
+                        type: 'array', 
+                        items: { type: 'string' }
+                    }
+                },
+                required:["sid", "mids"],
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.post<{Body:{sid:String, mids:RoskaMembers['mid'][]}}>('/group/member/transition', {schema}, async (req, res)=>{
+            const {sid, mids} = req.body;
+            
+            await Postgres.query<RoskaSerials>(`UPDATE roska_members SET transition = 1 WHERE sid=$1 AND mid = ANY($2);`, [sid, mids]);
+            
             return res.status(200).send({});
         });
     }
