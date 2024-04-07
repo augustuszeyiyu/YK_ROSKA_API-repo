@@ -1,6 +1,6 @@
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
+import { RoskaBids, RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { BaseError, LoginError, UserError } from '/lib/error';
@@ -179,7 +179,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{gid:RoskaMembers['gid'], bid_amount:RoskaMembers['bid_amount']}}>('/group/member/bid', {schema}, async (req, res)=>{
+        fastify.post<{Body:{gid:RoskaBids['gid'], bid_amount:RoskaBids['bid_amount']}}>('/group/member/bid', {schema}, async (req, res)=>{
             
             const {uid}:{uid:User['uid']} = req.session.token!;
 
@@ -240,7 +240,28 @@ export = async function(fastify: FastifyInstance) {
 
             const {sid} = req.params;
             
-            await Postgres.query<RoskaSerials>(`UPDATE roska_members SET transition = 1 WHERE sid=$1 AND uid=$2;`, [sid, uid]);
+            const {rows:[serial_haed_uid]} = await Postgres.query<RoskaMembers>(`
+                SELECT uid 
+                FROM roska_members 
+                WHERE sid=$1 
+                ORDER BY mid 
+                LIMIT 1;`, [sid]);
+
+
+            const {rows:[next_gid]} = await Postgres.query<{gid:RoskaGroups['gid']}>(`
+                SELECT gid
+                FROM roska_groups
+                WHERE sid = $1 AND mid = ''
+                ORDER BY gid ASC LIMIT 1`,[sid]);
+
+                
+
+            await Postgres.query<RoskaMembers>(`
+                UPDATE roska_members 
+                SET transition = 1, transit_to = $3, transit_gid = $4 
+                WHERE sid=$1 AND uid=$2;`, [sid, uid, serial_haed_uid, next_gid]);
+
+
             
             return res.status(200).send({});
         });
