@@ -1,5 +1,5 @@
 SET search_path TO "public";
-SET client_encoding = EUC_TW;
+SET client_encoding = UTF8;
 SET timezone = 'Asia/Taipei';
 SET auto_explain.log_nested_statements = ON;
 

@@ -22,7 +22,7 @@ export = async function(fastify: FastifyInstance) {
                     contact_mobile_number: { type: 'string' },
                     sid: { type: 'string' }
                 },
-                required: ['uid', 'sid']
+                required: ['sid']
             },
             security: [{ bearerAuth: [] }],
 		};
@@ -83,7 +83,7 @@ export = async function(fastify: FastifyInstance) {
                         items: {type:'string'} 
                     },
                 },
-                required: ['uid', 'sid']
+                required: ['sid']
             },
             security: [{ bearerAuth: [] }],
 		};
