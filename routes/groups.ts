@@ -145,8 +145,10 @@ export = async function(fastify: FastifyInstance) {
                 properties:{
                     year_month: {type: 'string'}
                 },
-                examples: [{year_month:'2023-06'}]
             },
+            examples: [
+                {year_month:'2023-06'}
+            ],
             security: [{ bearerAuth: [] }],
 		};
 
@@ -173,7 +175,8 @@ export = async function(fastify: FastifyInstance) {
             const input_date = year_month.split('-');
             const year = Number(input_date[0]);
             const month = Number(input_date[1]);
-
+            console.log({year, month});
+            
 
             const {rows:user_transition_info} = await Postgres.query<{
                 sid:RoskaMembers['sid'], 
@@ -223,7 +226,7 @@ export = async function(fastify: FastifyInstance) {
                 INNER JOIN 
                     roska_serials s ON m.sid=s.sid
                 WHERE 
-                    m.uid = '01iredbil8mrobjqpta5k5rq70'
+                    m.uid = $1
                 ORDER BY 
                     m.sid;`, [uid, year, month]);
 
