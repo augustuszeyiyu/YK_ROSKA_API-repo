@@ -143,23 +143,21 @@ export = async function(fastify: FastifyInstance) {
             params: {
                 type: 'object',
                 properties:{
-                    year_month: {type: 'string'}
+                    year:  {type: 'number'},
+                    month: {type: 'number'}
                 },
             },
-            examples: [
-                {year_month:'2023-06'}
-            ],
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{year_month:string}}>('/group/serial/settlement/:year_month', {schema}, async (req, res)=>{
+        fastify.get<{Params:{year:number, month:number}}>('/group/serial/settlement/:year_month', {schema}, async (req, res)=>{
             if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
 
             const {uid} = req.session.token!;
-            const {year_month} = req.params;
-
+            const {year, month} = req.params;
+            console.log({year, month});
 
             const {rows:SYSVARS} = await Postgres.query<SysVar>(`
                 SELECT * 
@@ -171,12 +169,6 @@ export = async function(fastify: FastifyInstance) {
             const transition_fee = Number(SYSVARS[1].value);
             const Interest_bonus = Number(SYSVARS[2].value);
 
-
-            const input_date = year_month.split('-');
-            const year = Number(input_date[0]);
-            const month = Number(input_date[1]);
-            console.log({year, month});
-            
 
             const {rows:user_transition_info} = await Postgres.query<{
                 sid:RoskaMembers['sid'], 
