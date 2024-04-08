@@ -65,7 +65,7 @@ export = async function(fastify: FastifyInstance) {
 			}),
 		};
 		fastify.post<{Body:User_Registr}>('/register', {schema}, async (req, res)=>{			
-			const { nid, name, gender, birth_date, address, line_id, contact_home_number, contact_mobile_number, 
+			const { nid, name, gender, birth_date, address, contact_home_number, contact_mobile_number, 
 					bank_code, branch_code, bank_account_name, bank_account_number,
 					emergency_nid, emergency_contact, emergency_contact_number, emergency_contact_relation,
 					referrer_mobile_number, volunteer_mobile_number, password } = req.body;

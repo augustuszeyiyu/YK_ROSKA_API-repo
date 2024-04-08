@@ -5,7 +5,6 @@ export interface User {
     gender: 'M'|'F',
     birth_date: string,
     address: string,
-    line_id: string,
     contact_home_number: string,
     contact_mobile_number: string,
     role: number,

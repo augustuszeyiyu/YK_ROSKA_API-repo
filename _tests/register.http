@@ -10,7 +10,6 @@ Content-Type: application/json
     "gender": "string",
     "birth_date": "1930-08-28",
     "address": "台北市北投區光明路二段二樓",
-    "line_id": "Richard",
     "contact_home_number": "02-28233708",
     "contact_mobile_number": "093508888",
     "bank_code": "004",

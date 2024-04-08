@@ -4,15 +4,11 @@ SET search_path TO "public";
 -- start users
 ALTER TABLE users ALTER COLUMN password SET default '';
 
-CREATE OR REPLACE FUNCTION update_referrer_path() 
+CREATE OR REPLACE FUNCTION update_referrer_path()
 RETURNS trigger AS $$
 BEGIN
 
     NEW.nid = UPPER(NEW.nid);
-
-    IF NEW.line_id IS NOT NULL THEN
-        NEW.line_id = LOWER(NEW.line_id);
-    END IF;
 
  	IF NEW.contact_mobile_number ~ '^(09\d{2}-\d{3}-\d{3})$' THEN
         -- Format for mobile phone numbers (e.g., 0905-095-111)
