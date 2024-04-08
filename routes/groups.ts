@@ -91,6 +91,10 @@ export = async function(fastify: FastifyInstance) {
                 for (const g of t.group_info) {
                     
                     if (t.transition === 0) {
+                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
+                            continue;
+                        }
+                        else
                         if (g.gid!.indexOf('-t00') > 1) {
                             g.subtotal =  Number(t.basic_unit_amount);
                             t.total += g.subtotal;
@@ -112,6 +116,10 @@ export = async function(fastify: FastifyInstance) {
                     }
                     else
                     if (t.transition === 1) {
+                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
+                            continue;
+                        }
+                        else
                         if (g.gid!.indexOf('-t00') > 1) {
                             g.subtotal =  Number(t.basic_unit_amount);
                             t.total += g.subtotal;
@@ -228,6 +236,10 @@ export = async function(fastify: FastifyInstance) {
                 for (const g of t.group_info) {
                     
                     if (t.transition === 0) {
+                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
+                            continue;
+                        }
+                        else
                         if (g.gid!.indexOf('-t00') > 1) {
                             g.subtotal =  Number(t.basic_unit_amount);
                             t.total += g.subtotal;
@@ -249,6 +261,10 @@ export = async function(fastify: FastifyInstance) {
                     }
                     else
                     if (t.transition === 1) {
+                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
+                            continue;
+                        }
+                        else
                         if (g.gid!.indexOf('-t00') > 1) {
                             g.subtotal =  Number(t.basic_unit_amount);
                             t.total += g.subtotal;
