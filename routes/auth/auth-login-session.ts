@@ -115,7 +115,6 @@ export = async function(fastify:FastifyInstance) {
 
 		type ResponseType = {
 			access_token:string;
-			refresh_token:string;
 			expired_time:epoch;
 			login_time:epoch;
 		};
@@ -202,7 +201,7 @@ export = async function(fastify:FastifyInstance) {
 				tid: TOKEN_INFO.tid,
 				exp: TOKEN_INFO.exp + LOGIN_SESSION_DURATION
 			};
-			const refresh_token = BWT.GenBWT(REFRESH_INFO, Config.secret.session);
+			// const refresh_token = BWT.GenBWT(REFRESH_INFO, Config.secret.session);
 
 
 			res
@@ -216,7 +215,6 @@ export = async function(fastify:FastifyInstance) {
 			.status(200)
 			.send({
 				access_token:  token,
-				refresh_token: refresh_token,
 				expired_time:  AUTH_DATA.expired_time,
 				login_time:    AUTH_DATA.login_time
 			});
