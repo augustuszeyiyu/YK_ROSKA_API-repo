@@ -78,6 +78,8 @@ export = async function(fastify: FastifyInstance) {
                         ), '[]'::jsonb) AS group_info
                 FROM 
                     roska_members m
+                INNER JOIN 
+                    roska_serials s ON m.sid=s.sid
                 WHERE 
                     m.uid = $1
                 ORDER BY 
@@ -218,6 +220,8 @@ export = async function(fastify: FastifyInstance) {
                         ), '[]'::jsonb) AS group_info
                 FROM 
                     roska_members m
+                INNER JOIN 
+                    roska_serials s ON m.sid=s.sid
                 WHERE 
                     m.uid = '01iredbil8mrobjqpta5k5rq70'
                 ORDER BY 
