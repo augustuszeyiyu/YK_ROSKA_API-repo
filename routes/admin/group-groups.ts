@@ -5,11 +5,12 @@ import { RoskaBids, RoskaCandidate, RoskaGroups, RoskaMembers, RoskaSerials } fr
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
-import { BaseError } from "/lib/error";
+import { BaseError, UserError } from "/lib/error";
 import { INT_POSSITIVE_STR_FORMAT, SORT_ORDER } from "/data-type/common-helpers";
 import { GroupError } from "/lib/error/gruop-error";
 import { SysVarControl } from "/lib/sysvar";
 import { SysVar } from "/data-type/sysvar";
+import { QueryResult } from "pg";
 
 
 export = async function(fastify: FastifyInstance) {
@@ -296,19 +297,28 @@ export = async function(fastify: FastifyInstance) {
         const schema = {
             description: '開標 gid',
             summary: '開標 gid',
-            params: {
+            body: {
                 type: 'object',
                 properties:{
-                    gid: {type: 'string'}
+                    gid: {type: 'string'},
+                    assign_to_uid: {type: 'string'},
                 },
                 required:["gid"],
             },
             security: [{ bearerAuth: [] }],
         };
 
-        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group/bid/:gid', {schema}, async (req, res)=>{
-            const {gid} = req.params;
+        fastify.post<{Body:{gid:RoskaGroups['gid'], assign_to_uid:RoskaMembers['uid']}}>('/group/bid', {schema}, async (req, res)=>{
+            const {gid, assign_to_uid} = req.body;
 
+            const {rows:[group_info]} = await Postgres.query<RoskaGroups&RoskaSerials>(`
+                    SELECT * 
+                    FROM roska_groups g
+                    INNER JOIN roska_serials s ON g.sid = s.sid
+                    WHERE g.gid = $1;`, [gid]);
+            
+            console.log({bid_unit_spacing:group_info.bid_unit_spacing, max_bid_amount:group_info.max_bid_amount});
+            const sid = group_info.sid;
 
             const {rows:[count_winner]} = await Postgres.query<{count:num_str}>(`SELECT COUNT(*) FROM roska_members WHERE gid=$1;`, [gid]);
             if (Number(count_winner.count) > 0) {
@@ -321,15 +331,13 @@ export = async function(fastify: FastifyInstance) {
                 return res.errorHandler(GroupError.NO_MEMBER_BID);
             }
 
-            const sid = roska_bids[0].sid;
-            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
 
-            console.log({roska_bid_count: roska_bids.length, bid_unit_spacing:roska_serial.bid_unit_spacing, max_bid_amount:roska_serial.max_bid_amount});
+            console.log({roska_bid_count: roska_bids.length, bid_unit_spacing:group_info.bid_unit_spacing, max_bid_amount:group_info.max_bid_amount});
             
 
             const candidate:RoskaCandidate[] = []; 
             
-            for (let index = Number(roska_serial.max_bid_amount); index >= Number(roska_serial.min_bid_amount); index-= Number(roska_serial.bid_unit_spacing)) {
+            for (let index = Number(group_info.max_bid_amount); index >= Number(group_info.min_bid_amount); index-= Number(group_info.bid_unit_spacing)) {
 
                 console.log({index});
                 
@@ -337,7 +345,7 @@ export = async function(fastify: FastifyInstance) {
 
                     console.log({mid, gid, sid, uid, bid_amount});
                     
-                    if (roska_serial.max_bid_amount === bid_amount) {
+                    if (group_info.max_bid_amount === bid_amount) {
                         candidate.push({mid, gid, sid, uid, bid_amount});
                     }                    
                 }
@@ -372,7 +380,7 @@ export = async function(fastify: FastifyInstance) {
             }
 
             // NOTE: updaet roska_bids
-             {
+            {
                 const sql = PGDelegate.format(`
                     UPDATE roska_bids 
                     SET win = true 
@@ -405,7 +413,7 @@ export = async function(fastify: FastifyInstance) {
                 
                 const live_member_count = Number(live_die.live) - 2;
                 const die_member_count  = Number(live_die.die)  + 1;
-                const basic_unit_amount = Number(roska_serial.basic_unit_amount);
+                const basic_unit_amount = Number(group_info.basic_unit_amount);
                 const bit_amount        = Number(winner_candidate.bid_amount);
                 console.log({live_member_count, die_member_count, basic_unit_amount, bit_amount});
                 
@@ -511,11 +519,148 @@ export = async function(fastify: FastifyInstance) {
 
                 res.status(200).send(row);
             }
-            
-           
+        
         });
     }
+    {
+        const schema = {
+            description: '轉讓標或指定得標者',
+            summary: '開標 gid',
+            body: {
+                type: 'object',
+                properties:{
+                    gid: {type: 'string'},
+                    assign_to_uid: {type: 'string'},
+                    assign_from_uid: {type: 'string'},                    
+                },
+                required:["gid", "assign_to_uid", "assign_from_uid"],
+            },
+            security: [{ bearerAuth: [] }],
+        };
 
+        fastify.post<{Body:{gid:RoskaGroups['gid'], assign_to_uid:RoskaMembers['uid'], assign_from_uid:RoskaMembers['uid']}}>('/group/bid/transfer', {schema}, async (req, res)=>{
+            const {gid, assign_to_uid, assign_from_uid} = req.body;
+
+            // NOTE: 檢查得標者是否存在
+            const {rows:[group_info]} = await Postgres.query<RoskaGroups&RoskaSerials>(`
+                    SELECT * 
+                    FROM roska_groups g
+                    INNER JOIN roska_serials s ON g.sid = s.sid
+                    WHERE g.gid = $1 AND g.uid = $2;`, [gid, assign_from_uid]);
+            
+            if (group_info === undefined) {
+                return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS, [assign_from_uid]);
+            }
+            console.log({bid_unit_spacing:group_info.bid_unit_spacing, max_bid_amount:group_info.max_bid_amount});
+            
+            
+            const sid = group_info.sid;
+
+
+            const {rows:users_info} = await Postgres.query<RoskaMembers>(`
+                SELECT *
+                FROM roska_members
+                WHERE sid = $1 and uid = ANY($2);`, [gid, [assign_to_uid, assign_from_uid]]);
+
+            
+            if (users_info.length === 1) {
+                if (users_info[0].uid !== assign_to_uid) {
+                    return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS, [assign_to_uid]);
+                } else {
+                    return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS, [assign_from_uid]);
+                }
+            }
+            
+            const old_winner = users_info[1];
+            const new_winner = users_info[0];
+            const old_candidate = {
+                sid: group_info.sid, 
+                gid: group_info.gid,
+                mid: old_winner.mid,
+                uid: old_winner.uid,    
+            }
+            const new_candidate = {
+                sid: group_info.sid, 
+                gid: group_info.gid,
+                mid: new_winner.mid,
+                uid: new_winner.uid,    
+            }
+            
+
+            const update_groups_sql = PGDelegate.format(`
+                UPDATE 
+                    roska_groups
+                SET 
+                    mid = {mid},
+                    uid = {uid},
+                WHERE
+                    sid = {sid} AND
+                    gid = {gid} AND
+                    mid = {from_mid} AND
+                    uid = {from_uid} RETURNING *;`, 
+                Object.assign(new_candidate, {
+                    from_mid: old_candidate.mid,
+                    from_uid: old_candidate.uid,
+                }));
+
+            const update_old_bid_sql = PGDelegate.format(`
+                UPDATE 
+                    roska_bids
+                SET win = false
+                WHERE
+                    gid={gid} AND
+                    sid={sid} AND
+                    mid={mid} AND
+                    uid={uid} RETURNING *;`, 
+                old_candidate);
+
+            const update_new_bid_sql = PGDelegate.format(`
+                UPDATE 
+                    roska_bids 
+                SET 
+                    win = true 
+                WHERE
+                    gid={gid} AND
+                    sid={sid} AND
+                    mid={mid} AND
+                    uid={uid} RETURNING *;`, 
+                new_candidate);
+            console.log({update_groups_sql, update_old_bid_sql, update_new_bid_sql});
+
+            //@ts-ignore
+            const [{rows:[update_groups]}, {rows:[update_old_bid]}, {rows:[update_new_bid]}] = await Postgres.query([update_groups_sql, update_old_bid_sql, update_new_bid_sql].join('\n')) as Promise<QueryResult<any>[]>;
+            
+            const remove_winning_data = old_winner.details.pop();
+            const update_old_member_sql = PGDelegate.format(`
+                UPDATE 
+                    roska_members
+                SET gid = '',
+                    win_amount = 0,
+                    details = {details}::jsonb
+                WHERE   
+                    mid = {mid} AND
+                    uid = {uid} AND
+                    sid = {sid} RETURNING *;`, 
+                { details: old_winner.details });
+
+            const update_new_member_sql = PGDelegate.format(`
+                UPDATE 
+                    roska_members
+                SET gid = {gid},
+                    win_amount = 0,
+                    details = {details}::jsonb
+                WHERE   
+                    mid = {mid} AND
+                    uid = {uid} AND
+                    sid = {sid} RETURNING *;`, 
+                Object.assign(new_candidate, { details:JSON.stringify(new_winner.details.push(remove_winning_data!)) }));
+            
+
+            await Postgres.query([update_groups_sql, update_old_member_sql, update_new_member_sql].join('\n'));
+
+            return res.status(200).send({});
+        })
+    }
     function isWeekend(date) {
         // Check if the day of the week is Saturday (6) or Sunday (0).
         return date.getDay() === 0 || date.getDay() === 6;
