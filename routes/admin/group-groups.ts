@@ -10,6 +10,7 @@ import { INT_POSSITIVE_STR_FORMAT, SORT_ORDER } from "/data-type/common-helpers"
 import { GroupError } from "/lib/error/gruop-error";
 import { SysVarControl } from "/lib/sysvar";
 import { SysVar } from "/data-type/sysvar";
+import { QueryResult } from "pg";
 
 
 export = async function(fastify: FastifyInstance) {
@@ -296,7 +297,7 @@ export = async function(fastify: FastifyInstance) {
         const schema = {
             description: '開標 gid',
             summary: '開標 gid',
-            params: {
+            body: {
                 type: 'object',
                 properties:{
                     gid: {type: 'string'}
@@ -306,58 +307,115 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
         };
 
-        fastify.get<{Params:{gid:RoskaGroups['gid']}}>('/group/bid/:gid', {schema}, async (req, res)=>{
-            const {gid} = req.params;
+        fastify.post<{Body:{gid:RoskaGroups['gid']}}>('/group/bid', {schema}, async (req, res)=>{
+            const {gid} = req.body;
 
 
-            const {rows:[count_winner]} = await Postgres.query<{count:num_str}>(`SELECT COUNT(*) FROM roska_members WHERE gid=$1;`, [gid]);
-            if (Number(count_winner.count) > 0) {
+            const {rows:[group_info]} = await Postgres.query<Partial<RoskaGroups>&Partial<RoskaSerials&{available:number}>>(`
+                SELECT g.gid, g.bid_start_time, g.bid_end_time, g.mid, g.uid, g.bid_amount, g.win_time, g.win_amount, s.*, 
+                (
+                    SELECT COUNT(*) 
+                    FROM roska_groups
+                    WHERE sid=s.sid AND uid='' AND mid = ''
+                ) as available
+                FROM roska_groups g
+                INNER JOIN roska_serials s ON g.sid=s.sid
+                WHERE g.gid=$1;`, [gid]);
+            if (group_info === undefined) {
+                return res.errorHandler(GroupError.GID_NOT_FOUND);
+            }
+
+            if (group_info.uid !== null || group_info.uid !== '') {
                 return res.errorHandler(GroupError.DUPLICATE_BID);
             }
-
             
-            const {rows:roska_bids} = await Postgres.query<RoskaBids>(`SELECT * FROM roska_bids WHERE gid=$1 ORDER BY bid_amount DESC;`, [gid]);
-            if (roska_bids.length === 0) {
-                return res.errorHandler(GroupError.NO_MEMBER_BID);
+            if (group_info.sid === undefined) {
+                return res.errorHandler(GroupError.SID_NOT_FOUND);
             }
 
-            const sid = roska_bids[0].sid;
-            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
+            const sid = group_info.sid;
+            const candidate:RoskaCandidate[] = [];
+            let   winner_index = 0, winner_candidate = {} as RoskaCandidate;
 
-            console.log({roska_bid_count: roska_bids.length, bid_unit_spacing:roska_serial.bid_unit_spacing, max_bid_amount:roska_serial.max_bid_amount});
-            
 
-            const candidate:RoskaCandidate[] = []; 
-            
-            for (let index = Number(roska_serial.max_bid_amount); index >= Number(roska_serial.min_bid_amount); index-= Number(roska_serial.bid_unit_spacing)) {
+            const {rows:roska_bids} = await Postgres.query<RoskaBids&{assign_mid:RoskaBids['mid'], assign_uid:RoskaBids['uid'], assign_bid:RoskaBids['bid_amount']}>(`
+                SELECT b.*, r.mid AS assign_mid, r.uid AS assign_uid, r.bid_amount AS assign_bid
+                FROM roska_bids b
+                LEFT JOIN roska_bids r ON b.gid = r.gid AND r.win = true
+                WHERE b.gid = $1
+                ORDER BY b.bid_amount DESC;
+            `, [gid]);
+            console.log({roska_bid_count: roska_bids.length, bid_unit_spacing:group_info.bid_unit_spacing, max_bid_amount:group_info.max_bid_amount});   
 
-                console.log({index});
-                
-                for (const {mid, gid, sid, uid, bid_amount} of roska_bids) {
+           
+            // NOTE: 指定得獎者
+            if (roska_bids[0].assign_mid !== null && group_info.uid === '') {                
+                winner_candidate = {
+                    gid, sid,
+                    mid: roska_bids[0].assign_mid,
+                    uid: roska_bids[0].assign_uid,
+                    bid_amount: Number(roska_bids[0].assign_bid)
+                };
+            }
+            else
+            // NOTE: 無人投標
+            if (roska_bids.length === 0 && group_info.uid === '') {
+                const {rows:available_members} = await Postgres.query<RoskaMembers>(`
+                    SELECT * 
+                    FROM roska_members 
+                    WHERE sid=$1 AND gid='';`, [sid]);
 
-                    console.log({mid, gid, sid, uid, bid_amount});
-                    
-                    if (roska_serial.max_bid_amount === bid_amount) {
-                        candidate.push({mid, gid, sid, uid, bid_amount});
-                    }                    
+                if (available_members.length === 0) {
+                    return res.errorHandler(GroupError.DUPLICATE_BID);
                 }
-
-                if (candidate.length > 0) break;                
+                else {
+                    const avail_member = available_members[0];
+                    winner_candidate = {
+                        gid: gid,
+                        sid: avail_member.sid,
+                        mid: avail_member.mid,
+                        uid: avail_member.uid,                        
+                        bid_amount: 1000,
+                    }
+                }                
             }
-
-            const winner_index = Math.floor(Math.random() * candidate.length);
-            const winner_candidate = candidate[winner_index];
+            // NOTE: 正常開標
+            else {
+                for (let index = Number(group_info.max_bid_amount); index >= Number(group_info.min_bid_amount); index-= Number(group_info.bid_unit_spacing)) {
+                    console.log({index});
+                    
+                    for (const {mid, gid, sid, uid, bid_amount} of roska_bids) {
+    
+                        console.log({mid, gid, sid, uid, bid_amount});
+                        
+                        if (group_info.max_bid_amount === bid_amount) {
+                            candidate.push({
+                                gid, sid, mid, uid, 
+                                bid_amount:Number(bid_amount)}
+                            );
+                        }                    
+                    }
+    
+                    if (candidate.length > 0) break;                
+                }
+    
+                winner_index = Math.floor(Math.random() * candidate.length);
+                winner_candidate = candidate[winner_index];
+            }
+            
+           
             console.log({winner_index, winner_candidate});
             
 
-            // NOTE: updaet roska_groups
+            
             {
+                // NOTE: updaet roska_groups
                 const sql = PGDelegate.format(`
-                    UPDATE roska_groups
-                    SET mid = {mid},
-                        uid = {uid},
-                        bid_amount = {bid_amount},
-                        win_time = NOW()
+                    UPDATE  roska_groups
+                    SET     mid = {mid},
+                            uid = {uid},
+                            bid_amount = {bid_amount},
+                            win_time = NOW()
                     WHERE   gid={gid}
                         AND sid={sid}
                         AND NOW() > bid_end_time;`, 
@@ -371,132 +429,151 @@ export = async function(fastify: FastifyInstance) {
                 }
             }
 
-            // NOTE: updaet roska_bids
-             {
-                const sql = PGDelegate.format(`
-                    UPDATE roska_bids 
-                    SET win = true 
+            // NOTE: updaet roska_bids and roska_member
+            {
+                const bid = PGDelegate.format(`
+                    UPDATE  roska_bids 
+                    SET     win = true 
                     WHERE   mid={mid} 
                         AND gid={gid}
                         AND sid={sid}
                         AND uid={uid}
-                        AND bid_amount = {bid_amount};`, 
+                    RETURNING *;`, 
                     winner_candidate);
+           
 
-                console.log(sql);
-                await Postgres.query(sql);
+                const member = PGDelegate.format(`
+                    UPDATE  roska_members
+                    SET     gid = {gid},
+                            win_amount = {win_amount},
+                            win_time = NOW(),
+                    WHERE   mid = {mid}
+                        AND uid = {uid}
+                        AND sid = {sid}
+                    RETURNING *;`,
+                    winner_candidate);     
+
+                    console.log(bid, member);
+                const result = await Postgres.query([bid, member].join('\n'));
+                console.log(result[0].rows, result[1].rows);                
             }
 
-            // NOTE: updaet roska_members
+
+            // NOTE: insert roska_details
             {
                 const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee') ORDER BY key ASC;`);
                 console.log({sysvar});
                 const handling_fee = Number(sysvar[0].value);
                 const transition_fee = Number(sysvar[1].value);
                 
-                const {rows:[live_die]} = await Postgres.query<{live:num_str, die:num_str}>(`
-                    SELECT 
-                        COUNT(CASE WHEN gid = '' THEN 1 END) AS live,
-                        COUNT(CASE WHEN gid <> '' THEN 1 END) AS die
-                    FROM roska_members
-                    WHERE sid = $1;`, [sid]);
+                // const {rows:[live_die]} = await Postgres.query<{live:num_str, die:num_str}>(`
+                //     SELECT 
+                //         COUNT(CASE WHEN gid = '' THEN 1 END) AS live,
+                //         COUNT(CASE WHEN gid <> '' THEN 1 END) AS die
+                //     FROM roska_members
+                //     WHERE sid = $1;`, [sid]);
 
-                console.log({live_die});
+                // console.log({live_die});
                 
-                const live_member_count = Number(live_die.live) - 2;
-                const die_member_count  = Number(live_die.die)  + 1;
-                const basic_unit_amount = Number(roska_serial.basic_unit_amount);
-                const bit_amount        = Number(winner_candidate.bid_amount);
-                console.log({live_member_count, die_member_count, basic_unit_amount, bit_amount});
+                // const live_member_count = Number(live_die.live) - 2;
+                // const die_member_count  = Number(live_die.die)  + 1;
+                
+                // const bit_amount        = Number(winner_candidate.bid_amount);
+                // console.log({live_member_count, die_member_count, basic_unit_amount, bit_amount});
                 
 
-                const update_member = {
-                    mid: winner_candidate.mid,
-                    sid: winner_candidate.sid,
-                    uid: winner_candidate.uid,
-                    gid: winner_candidate.gid,
-                    win_amount: (live_member_count * (basic_unit_amount - bit_amount)) + (die_member_count * basic_unit_amount) - (die_member_count * handling_fee)
-                }
-
-
-
+                let total_earn = 0;
                 let promise_list:string[] = [];
+                const basic_unit_amount = Number(group_info.basic_unit_amount);
+
+
+
                 const {rows:rosroska_members} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE sid=$1 ORDER BY mid ASC;`, [sid]);
                 for (const member of rosroska_members) {
                     if (member.mid === `${sid}-00`) {
                         const detail = {
-                            cycles: member.details.length,
+                            sid, gid,
                             mid: member.mid,
                             uid: member.uid,
-                            gid,
-                            sid: member.sid,
+                            live: false,
                             earn: 0,
-                            pay: -basic_unit_amount,
+                            pay: basic_unit_amount,
                             handling_fee: 0,
                             transition_fee: 0,
                         };
-                        member.details.push(detail);
+                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
-                            UPDATE roska_members
-                            SET details = {details}::jsonb
-                            WHERE   mid = {mid};`, 
-                        {mid: member.mid, details: JSON.stringify(member.details)});
+                            INSERT INTO roska_details (${Object.keys(detail).join(', ')})
+                            VALUES ({sid},{gid},{mid},{uid},{earn},{pay},{handling_fee},{transition_fee});
+                        `, detail);
                         
                         promise_list.push(sql);
                     }
                     else
-                    if (member.mid === update_member.mid) {
+                    if (member.mid !== winner_candidate.mid && member.gid !== '') {
                         const detail = {
-                            cycles: member.details.length,
+                            sid, gid,
                             mid: member.mid,
                             uid: member.uid,
-                            gid,
-                            sid: member.sid,
-                            earn: update_member.win_amount,
-                            pay: 0,
-                            handling_fee: -member.details.length * handling_fee,
+                            live: false,
+                            earn: 0,
+                            pay: group_info.basic_unit_amount!,
+                            handling_fee: handling_fee,
                             transition_fee: 0,
                         };
-                        member.details.push(detail);
+                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
-                            UPDATE roska_members
-                            SET gid = {gid},
-                                uid = {uid},
-                                win_amount = {win_amount},
-                                win_time = NOW(),
-                                details = {details}::jsonb
-                            WHERE   mid = {mid}
-                                AND uid = {uid}
-                                AND sid = {sid};`, 
-                        Object.assign(update_member, {details: JSON.stringify(member.details)}));
+                            INSERT INTO roska_details (${Object.keys(detail).join(', ')})
+                            VALUES ({sid},{gid},{mid},{uid},{earn},{pay},{handling_fee},{transition_fee});
+                        `, detail);
+                        
                         promise_list.push(sql);
                     }
-                    else {
+                    else 
+                    if (member.mid !== winner_candidate.mid && member.gid === '') {
                         const detail = {
-                            cycles: member.details.length,
+                            sid, gid,
                             mid: member.mid,
                             uid: member.uid,
-                            gid,
-                            sid: member.sid,
+                            live: true,
                             earn: 0,
-                            pay: member.gid === ''? -basic_unit_amount - bit_amount: -basic_unit_amount,
+                            pay: basic_unit_amount - winner_candidate.bid_amount,
                             handling_fee: 0,
                             transition_fee: 0,
                         };
-                        member.details.push(detail);
+                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
-                            UPDATE roska_members
-                            SET details = {details}::jsonb
-                            WHERE   mid = {mid};`, 
-                        {mid: member.mid, details: JSON.stringify(member.details)});
-
+                            INSERT INTO roska_details (${Object.keys(detail).join(', ')})
+                            VALUES ({sid},{gid},{mid},{uid},{earn},{pay},{handling_fee},{transition_fee});
+                        `, detail);
+                        
                         promise_list.push(sql);
                     }
-                }
+                } // for end
 
+               
+                // NOTE: 更新得標者資料
+                const detail = {
+                    sid, gid,
+                    mid: winner_candidate.mid,
+                    uid: winner_candidate.uid,
+                    live: false,
+                    earn: total_earn,
+                    pay: 0,
+                    handling_fee: 0,
+                    transition_fee: 0,
+                };
+                total_earn += detail.pay - detail.handling_fee;
+
+                const sql = PGDelegate.format(`
+                    INSERT INTO roska_details (${Object.keys(detail).join(', ')})
+                    VALUES ({sid},{gid},{mid},{uid},{earn},{pay},{handling_fee},{transition_fee});
+                `, detail);
+                
+                promise_list.push(sql);
                 
 
                 await Postgres.query(promise_list.join('\n'));                
@@ -511,8 +588,6 @@ export = async function(fastify: FastifyInstance) {
 
                 res.status(200).send(row);
             }
-            
-           
         });
     }
 

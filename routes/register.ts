@@ -60,7 +60,7 @@ export = async function(fastify: FastifyInstance) {
 					"emergency_contact_number": "0935088881",
 					"emergency_contact_relation": "父子",
 					"referrer_mobile_number": '0966286789',
-					"password": "Abcd1234"
+					"password": "A1234567"
 				}]
 			}),
 		};
