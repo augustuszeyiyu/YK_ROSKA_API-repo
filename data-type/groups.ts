@@ -69,3 +69,18 @@ export interface RoskaCandidate {
     sid:RoskaMembers['sid'], 
     bid_amount:RoskaGroups['bid_amount']
 }
+
+export interface RoskaDetails {
+    sid: RoskaGroups['sid'],
+    gid: RoskaGroups['gid'],
+    mid: RoskaMembers['mid'],
+    uid: RoskaMembers['uid'],
+    live: boolean,
+    bid_amount: boolean,
+    earn:number, 
+    pay:number,
+    handling_fee: number,
+    transition_fee: number,
+    update_time: string,
+    create_time: string,
+}

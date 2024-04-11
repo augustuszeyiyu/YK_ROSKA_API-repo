@@ -476,8 +476,6 @@ export = async function(fastify: FastifyInstance) {
                 let promise_list:string[] = [];
                 const basic_unit_amount = Number(group_info.basic_unit_amount);
 
-
-
                 const {rows:rosroska_members} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE sid=$1 ORDER BY mid ASC;`, [sid]);
                 for (const member of rosroska_members) {
                     if (member.mid === `${sid}-00`) {
@@ -665,39 +663,28 @@ export = async function(fastify: FastifyInstance) {
             
             const sid = group_info.sid;
 
-
-            // NOTE: update roska_bids winner info
-            {
-                const {rows:[old_winnder]} = await Postgres.query<RoskaBids>(`
-                    UPDATE  roska_bids
-                    SET     win = false                
-                    WHERE   gid = $1 AND uid = $2
-                    RETURNING *;`, [gid, assign_from_uid]);
-
-                await Postgres.query<RoskaBids>(`
-                    UPDATE  roska_bids
-                    SET     win = true
-                    WHERE   gid = $1 AND uid = $2;`, [gid, assign_to_uid]);
-
-            }
-            
-
             const {rows:users_bid_info} = await Postgres.query<RoskaBids>(`
                 SELECT  *
                 FROM    roska_bids
                 WHERE   sid = $1 
                     AND gid = $2
-                    AND uid = ANY($2)
-                    ;`, [sid, gid, [assign_to_uid, assign_from_uid]]);
+                    AND uid = ANY($2);`, [sid, gid, [assign_to_uid, assign_from_uid]]);
 
             
-            if (users_bid_info.length === 1) {
+            if (users_bid_info.length < 2) {
                 if (users_bid_info[0].uid !== assign_to_uid) {
                     return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS, [assign_to_uid]);
-                } else {
+                } 
+                else 
+                if (users_bid_info[1].uid !== assign_from_uid) {
                     return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS, [assign_from_uid]);
                 }
+                else {
+                    return res.errorHandler(UserError.ACCOUNT_NOT_EXISTS, [assign_to_uid, assign_from_uid]);
+                }
             }
+            
+            
             
             const old_winner = users_bid_info[1];
             const new_winner = users_bid_info[0];
@@ -715,70 +702,69 @@ export = async function(fastify: FastifyInstance) {
                 uid: new_winner.uid,
                 bid_amount: new_winner.bid_amount
             }
-            
-
-            await Postgres.query<RoskaGroups&RoskaSerials>(`
+            // NOTE: remvove old data
+            {
+                await Postgres.query<RoskaGroups&RoskaSerials>(`
                 DELETE FROM roska_details WHERE gid=$1 AND sid=$2`, [gid, sid]);
 
+                const update_groups_sql = PGDelegate.format(`
+                    UPDATE 
+                        roska_groups
+                    SET 
+                        mid = {mid},
+                        uid = {uid},
 
+                    WHERE
+                        sid = {sid} AND
+                        gid = {gid} AND
+                        mid = {from_mid} AND
+                        uid = {from_uid} RETURNING *;`, 
+                    Object.assign(winner_candidate, {
+                        from_mid: old_winner_candidate.mid,
+                        from_uid: old_winner_candidate.uid,
+                    }));
 
-            const update_groups_sql = PGDelegate.format(`
-                UPDATE 
-                    roska_groups
-                SET 
-                    mid = {mid},
-                    uid = {uid},
+                const update_old_bid_sql = PGDelegate.format(`
+                    UPDATE 
+                        roska_bids
+                    SET win = false
+                    WHERE
+                        gid={gid} AND
+                        sid={sid} AND
+                        mid={mid} AND
+                        uid={uid} RETURNING *;`, 
+                        old_winner_candidate);
 
-                WHERE
-                    sid = {sid} AND
-                    gid = {gid} AND
-                    mid = {from_mid} AND
-                    uid = {from_uid} RETURNING *;`, 
-                Object.assign(winner_candidate, {
-                    from_mid: old_winner_candidate.mid,
-                    from_uid: old_winner_candidate.uid,
-                }));
+                const update_new_bid_sql = PGDelegate.format(`
+                    UPDATE 
+                        roska_bids 
+                    SET 
+                        win = true 
+                    WHERE
+                        gid={gid} AND
+                        sid={sid} AND
+                        mid={mid} AND
+                        uid={uid} RETURNING *;`, 
+                    winner_candidate);
 
-            const update_old_bid_sql = PGDelegate.format(`
-                UPDATE 
-                    roska_bids
-                SET win = false
-                WHERE
-                    gid={gid} AND
-                    sid={sid} AND
-                    mid={mid} AND
-                    uid={uid} RETURNING *;`, 
-                    old_winner_candidate);
+                const update_old_member_sql = PGDelegate.format(`
+                    UPDATE 
+                        roska_members
+                    SET     
+                        win_amount = 0
+                    WHERE
+                        gid={gid} AND
+                        sid={sid} AND
+                        mid={mid} AND
+                        uid={uid} RETURNING *;`, 
+                    old_winner_candidate);   
+                console.log({update_groups_sql});
 
-            const update_new_bid_sql = PGDelegate.format(`
-                UPDATE 
-                    roska_bids 
-                SET 
-                    win = true 
-                WHERE
-                    gid={gid} AND
-                    sid={sid} AND
-                    mid={mid} AND
-                    uid={uid} RETURNING *;`, 
-                winner_candidate);
-
-
-            const update_old_member_sql = PGDelegate.format(`
-                UPDATE 
-                    roska_members
-                SET     
-                    win_amount = 0
-                WHERE
-                    gid={gid} AND
-                    sid={sid} AND
-                    mid={mid} AND
-                    uid={uid} RETURNING *;`, 
-                old_winner_candidate);   
-            console.log({update_groups_sql, update_old_bid_sql, update_new_bid_sql});
-
-            //@ts-ignore
-            const [{rows:[update_groups]}, {rows:[update_old_bid]}, {rows:[update_new_bid]}, {rows:[update_old_member]}] = await Postgres.query([update_groups_sql, update_old_bid_sql, update_new_bid_sql, update_old_member_sql].join('\n')) as Promise<QueryResult<any>[]>;
-
+                //@ts-ignore
+                const [{rows:[update_groups]}, {rows:[update_old_bid]}, {rows:[update_new_bid]}, {rows:[update_old_member]}] = await Postgres.query([
+                    update_groups_sql, update_old_bid_sql, update_new_bid_sql, update_old_member_sql].join('\n')
+                    ) as Promise<QueryResult<any>[]>;
+            }     
 
             // NOTE: insert roska_details
             {
