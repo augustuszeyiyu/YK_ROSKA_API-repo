@@ -133,7 +133,7 @@ export = async function(fastify: FastifyInstance) {
         
             
     
-            await Postgres.query(insert_sql.join(', '));
+            await Postgres.query(insert_sql.join('\n'));
 
           
             
