@@ -117,23 +117,33 @@ export = async function(fastify: FastifyInstance) {
             
             
             let total_members = Number(member_count.count);
+            let last_index_member = total_members-1;
             if (roska_serial.member_count === total_members) {
                 return res.errorHandler(GroupError.GROUP_SERIAL_IS_FULL);
             }
 
+            
+            let remain_space = roska_serial.member_count - total_members;
+
             let insert_sql:string[] = [];
-            for (let index = 0; index < USERS.length; index++) {
-                const next = `${total_members+index}`.padStart(2, '0');
-                const mid = `${sid}-${next}`;
+            for (const phone_number of contact_mobile_numbers) {
+                for (let index = 0; index < USERS.length; index++) {
+                    const USER = USERS[index];
+
+                    if (USER.contact_mobile_number === phone_number && remain_space > 0) {
+                        --remain_space;
+                        const next = `${++last_index_member}`.padStart(2, '0');
+                        const mid = `${sid}-${next}`;
+                        
+                        const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid:USER.uid});
+                        insert_sql.push(sql);
+                    }
+                }
                 
-                const USER = USERS[index];
-                const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid:USER.uid});
-                insert_sql.push(sql);
-            }
-        
+            }        
             
     
-            await Postgres.query(insert_sql.join('\n'));
+            await Postgres.query(insert_sql.join('\n '));
 
           
             
