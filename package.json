@@ -25,6 +25,7 @@
     "clipargs": "^2.1.1",
     "colors": "^1.4.0",
     "copyfiles": "^2.4.1",
+    "csv-parser": "^3.0.0",
     "ejstmpl": "^0.9.1",
     "exceljs": "^4.4.0",
     "extes": "^4.2.1",
