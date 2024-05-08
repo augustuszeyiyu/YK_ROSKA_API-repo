@@ -70,7 +70,8 @@ export = async function(fastify: FastifyInstance) {
 
             let _s= '', sid_prefix = '', sid_date = '';
             const {rows:[row_sid]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
-                SELECT sid FROM roska_serials
+                SELECT sid 
+                FROM roska_serials
                 ORDER BY sid DESC;`);
 
 
@@ -97,7 +98,8 @@ export = async function(fastify: FastifyInstance) {
             console.log({bid_start_time, inputDate, formattedDate}); // Output: 2311
 
             const {rows:[row_bit_time]} = await Postgres.query<{sid:RoskaSerials['sid']}>(`
-                SELECT sid FROM roska_serials
+                SELECT sid 
+                FROM roska_serials
                 WHERE bid_start_time::date = $1
                 ORDER BY sid DESC;`, [bid_start_time]);
             console.log({row_bit_time});

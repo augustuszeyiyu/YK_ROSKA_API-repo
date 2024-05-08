@@ -682,7 +682,7 @@ export = async function(fastify: FastifyInstance) {
                 gid: group_info.gid,
                 mid: new_winner.mid,
                 uid: new_winner.uid,
-                bid_amount: new_winner.bid_amount,
+                bid_amount: old_winner.bid_amount,
                 win_amount: old_winner.win_amount,
                 transition: new_winner.transition
             }
@@ -702,7 +702,8 @@ export = async function(fastify: FastifyInstance) {
                         sid = {sid} AND
                         gid = {gid} AND
                         mid = {from_mid} AND
-                        uid = {from_uid} RETURNING *;`, 
+                        uid = {from_uid} 
+                    RETURNING *;`, 
                     Object.assign(winner_candidate, {
                         from_mid: old_winner_candidate.mid,
                         from_uid: old_winner_candidate.uid,
@@ -744,10 +745,24 @@ export = async function(fastify: FastifyInstance) {
                     old_winner_candidate);   
                 console.log({update_groups_sql});
 
+                const update_new_member_sql = PGDelegate.format(`
+                    UPDATE 
+                        roska_members
+                    SET 
+                        gid = {gid},
+                        win_amount = {win_amount}
+                    WHERE
+                        sid={sid} AND
+                        mid={mid} AND
+                        uid={uid} RETURNING *;`, 
+                    winner_candidate);   
+                console.log({update_new_member_sql});
+
+
                 //@ts-ignore
-                const [{rows:[update_groups]}, {rows:[update_old_bid]}, {rows:[update_new_bid]}, {rows:[update_old_member]}] = await Postgres.query([
-                    update_groups_sql, update_old_bid_sql, update_new_bid_sql, update_old_member_sql].join('\n')
-                    ) as Promise<QueryResult<any>[]>;
+                const [{rows:[update_groups]}, {rows:[update_old_bid]}, {rows:[update_new_bid]}, {rows:[update_old_member]}, {rows:[update_new_member]}] = await Postgres.query(
+                    [update_groups_sql, update_old_bid_sql, update_new_bid_sql, update_old_member_sql, update_new_member_sql].join('\n')
+                ) as Promise<QueryResult<any>[]>;
             }     
 
             // NOTE: insert roska_details
@@ -757,11 +772,10 @@ export = async function(fastify: FastifyInstance) {
                 const handling_fee = Number(sysvar[0].value);
                 const transition_fee = Number(sysvar[1].value);
                 const interest_bonus = Number(sysvar[2].value)
-       
-
-                let total_earn = 0;
-                let promise_list:string[] = [];
                 const basic_unit_amount = Number(group_info.basic_unit_amount);
+
+
+                let promise_list:string[] = [];                
 
 
                 let transition:string = '0';
@@ -778,7 +792,6 @@ export = async function(fastify: FastifyInstance) {
                             handling_fee: 0,
                             transition_fee: 0,
                         };
-                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
                             INSERT INTO roska_details (${Object.keys(detail).join(', ')})
@@ -801,7 +814,6 @@ export = async function(fastify: FastifyInstance) {
                             handling_fee: handling_fee,
                             transition_fee: 0,
                         };
-                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
                             INSERT INTO roska_details (${Object.keys(detail).join(', ')})
@@ -822,7 +834,6 @@ export = async function(fastify: FastifyInstance) {
                             handling_fee: 0,
                             transition_fee: 0,
                         };
-                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
                             INSERT INTO roska_details (${Object.keys(detail).join(', ')})
@@ -834,14 +845,13 @@ export = async function(fastify: FastifyInstance) {
                 } // for end
 
                 {
-                    const total_earn = cal_win_amount(handling_fee, transition_fee, interest_bonus, group_info.cycles, group_info.basic_unit_amount, group_info.bid_amount, gid, winner_candidate.transition);
                     // NOTE: 更新得標者資料
                     const detail = {
                         sid, gid,
                         mid: winner_candidate.mid,
                         uid: winner_candidate.uid,
                         live: false,
-                        profit: total_earn,
+                        profit: old_winner_candidate.win_amount,
                         handling_fee: winner_candidate.transition === 1? handling_fee: 0,
                         transition_fee: winner_candidate.transition === 1? transition_fee: 0,
                         interest_bonus: winner_candidate.transition === 1? interest_bonus: 0,
@@ -854,20 +864,6 @@ export = async function(fastify: FastifyInstance) {
                     `, detail);
 
                     promise_list.push(sql);
-
-                    
-                    const member = PGDelegate.format(`
-                        UPDATE  roska_members
-                        SET     gid = {gid},
-                                win_amount = {win_amount},
-                                win_time = NOW(),
-                        WHERE   mid = {mid}
-                            AND uid = {uid}
-                            AND sid = {sid}
-                        RETURNING *;`,
-                        Object.assign(winner_candidate, {win_amount:total_earn}));
-
-                    promise_list.push(member);
                 }
                 
                 await Postgres.query(promise_list.join('\n'));                
