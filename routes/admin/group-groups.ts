@@ -1,7 +1,7 @@
 import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaBids, RoskaCandidate, RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
+import { RoskaBids, RoskaCandidate, RoskaDetails, RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { ErrorCode } from "/lib/error-code";
@@ -300,9 +300,14 @@ export = async function(fastify: FastifyInstance) {
         fastify.post<{Body:{gid:RoskaGroups['gid']}}>('/group/bid', {schema}, async (req, res)=>{
             const {gid} = req.body;
 
-            
-            
-      
+
+            // NOTE: query handling_fee, transition_fee, interest_bonus
+            const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);
+            console.log({sysvar});
+            const handling_fee = Number(sysvar[0].value);
+            const transition_fee = Number(sysvar[1].value);
+            const interest_bonus = Number(sysvar[2].value)
+
 
             const {rows:[group_info]} = await Postgres.query<Partial<RoskaGroups>&Partial<RoskaSerials&{available:number}>>(`
                 SELECT g.gid, g.bid_start_time, g.bid_end_time, g.mid, g.uid, g.bid_amount, g.win_time, g.win_amount, s.*, 
@@ -334,9 +339,10 @@ export = async function(fastify: FastifyInstance) {
             let   winner_index = 0, winner_candidate = {} as RoskaCandidate;
 
 
-            const {rows:roska_bids} = await Postgres.query<RoskaBids&{assign_mid:RoskaBids['mid'], assign_uid:RoskaBids['uid'], assign_bid:RoskaBids['bid_amount']}>(`
-                SELECT b.*, r.mid AS assign_mid, r.uid AS assign_uid, r.bid_amount AS assign_bid
+            const {rows:roska_bids} = await Postgres.query<RoskaBids&{transition:RoskaMembers['transition'], assign_mid:RoskaBids['mid'], assign_uid:RoskaBids['uid'], assign_bid:RoskaBids['bid_amount']}>(`
+                SELECT b.*, m.transition, r.mid AS assign_mid, r.uid AS assign_uid, r.bid_amount AS assign_bid
                 FROM roska_bids b
+                INNER JOIN roska_bids m ON m.mid = b.mid
                 LEFT JOIN roska_bids r ON b.gid = r.gid AND r.win = true
                 WHERE b.gid = $1
                 ORDER BY b.bid_amount DESC;
@@ -350,7 +356,9 @@ export = async function(fastify: FastifyInstance) {
                     gid, sid,
                     mid: roska_bids[0].assign_mid,
                     uid: roska_bids[0].assign_uid,
-                    bid_amount: Number(roska_bids[0].assign_bid)
+                    bid_amount: Number(roska_bids[0].assign_bid),
+                    transition: roska_bids[0].transition,
+                    win_amount: 0
                 };
             }
             else
@@ -370,8 +378,10 @@ export = async function(fastify: FastifyInstance) {
                         gid: gid,
                         sid: avail_member.sid,
                         mid: avail_member.mid,
-                        uid: avail_member.uid,                        
+                        uid: avail_member.uid,
                         bid_amount: 1000,
+                        transition: avail_member.transition,
+                        win_amount: 0
                     }
                 }                
             }
@@ -380,15 +390,17 @@ export = async function(fastify: FastifyInstance) {
                 for (let index = Number(group_info.max_bid_amount); index >= Number(group_info.min_bid_amount); index-= Number(group_info.bid_unit_spacing)) {
                     console.log({index});
                     
-                    for (const {mid, gid, sid, uid, bid_amount} of roska_bids) {
+                    for (const {mid, gid, sid, uid, bid_amount, transition} of roska_bids) {
     
                         console.log({mid, gid, sid, uid, bid_amount});
                         
                         if (group_info.max_bid_amount === bid_amount) {
                             candidate.push({
                                 gid, sid, mid, uid, 
-                                bid_amount:Number(bid_amount)}
-                            );
+                                bid_amount:Number(bid_amount),
+                                transition: transition,
+                                win_amount: 0
+                            });
                         }                    
                     }
     
@@ -399,6 +411,7 @@ export = async function(fastify: FastifyInstance) {
                 winner_candidate = candidate[winner_index];
             }
             
+            winner_candidate.win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, group_info.cycles!, group_info.basic_unit_amount!, winner_candidate.bid_amount, gid, winner_candidate.transition)
            
             console.log({winner_index, winner_candidate});            
 
@@ -410,12 +423,14 @@ export = async function(fastify: FastifyInstance) {
                     SET     mid = {mid},
                             uid = {uid},
                             bid_amount = {bid_amount},
-                            win_time = NOW()
+                            win_time = NOW(),
+                            win_amount = {win_amount}
                     WHERE   gid={gid}
                         AND sid={sid}
                         AND NOW() > bid_end_time
                     RETURNING *;`, 
-                    winner_candidate);
+                    {winner_candidate}
+                );
 
                 console.log(sql);
                 
@@ -427,7 +442,7 @@ export = async function(fastify: FastifyInstance) {
 
             // NOTE: updaet roska_bids
             {
-                const bid = PGDelegate.format(`
+                const sql = PGDelegate.format(`
                     UPDATE  roska_bids 
                     SET     win = true 
                     WHERE   mid={mid} 
@@ -435,33 +450,17 @@ export = async function(fastify: FastifyInstance) {
                         AND sid={sid}
                         AND uid={uid}
                     RETURNING *;`, 
-                    winner_candidate);                
+                    winner_candidate);  
+                
+                const {rowCount} = await Postgres.query(sql);
+                if (rowCount === 0) {
+                    return res.errorHandler(GroupError.NOT_PAST_BID_END_TIME);
+                }
             }
 
 
             // NOTE: insert roska_details
             {
-                const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee') ORDER BY key ASC;`);
-                console.log({sysvar});
-                const handling_fee = Number(sysvar[0].value);
-                const transition_fee = Number(sysvar[1].value);
-                
-                // const {rows:[live_die]} = await Postgres.query<{live:num_str, die:num_str}>(`
-                //     SELECT 
-                //         COUNT(CASE WHEN gid = '' THEN 1 END) AS live,
-                //         COUNT(CASE WHEN gid <> '' THEN 1 END) AS die
-                //     FROM roska_members
-                //     WHERE sid = $1;`, [sid]);
-
-                // console.log({live_die});
-                
-                // const live_member_count = Number(live_die.live) - 2;
-                // const die_member_count  = Number(live_die.die)  + 1;
-                
-                // const bit_amount        = Number(winner_candidate.bid_amount);
-                // console.log({live_member_count, die_member_count, basic_unit_amount, bit_amount});
-                
-
                 let total_earn = 0;
                 let promise_list:string[] = [];
                 const basic_unit_amount = Number(group_info.basic_unit_amount);
@@ -469,21 +468,17 @@ export = async function(fastify: FastifyInstance) {
                 const {rows:rosroska_members} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE sid=$1 ORDER BY mid ASC;`, [sid]);
                 for (const member of rosroska_members) {
                     if (member.mid === `${sid}-00`) {
-                        const detail = {
+                        const detail:Partial<RoskaDetails> = {
                             sid, gid,
                             mid: member.mid,
                             uid: member.uid,
                             live: false,
-                            profit: 0,
-                            pay: basic_unit_amount,
-                            handling_fee: 0,
-                            transition_fee: 0,
+                            profit: -basic_unit_amount,
                         };
-                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
                             INSERT INTO roska_details (${Object.keys(detail).join(', ')})
-                            VALUES ({sid},{gid},{mid},{uid},{earn},{pay},{handling_fee},{transition_fee});
+                            VALUES ({sid},{gid},{mid},{uid},{live},{profit});
                         `, detail);
                         
                         promise_list.push(sql);
@@ -495,16 +490,14 @@ export = async function(fastify: FastifyInstance) {
                             mid: member.mid,
                             uid: member.uid,
                             live: false,
-                            profit: 0,
-                            pay: group_info.basic_unit_amount!,
-                            handling_fee: handling_fee,
+                            profit: -basic_unit_amount,
+                            handling_fee: 0,
                             transition_fee: 0,
                         };
-                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
                             INSERT INTO roska_details (${Object.keys(detail).join(', ')})
-                            VALUES ({sid},{gid},{mid},{uid},{live},{earn},{pay},{handling_fee},{transition_fee});
+                            VALUES ({sid},{gid},{mid},{uid},{live},{profit});
                         `, detail);
                         
                         promise_list.push(sql);
@@ -516,16 +509,12 @@ export = async function(fastify: FastifyInstance) {
                             mid: member.mid,
                             uid: member.uid,
                             live: true,
-                            profit: 0,
-                            pay: basic_unit_amount - winner_candidate.bid_amount,
-                            handling_fee: 0,
-                            transition_fee: 0,
+                            profit: -(basic_unit_amount - winner_candidate.bid_amount),
                         };
-                        total_earn += detail.pay - detail.handling_fee;
 
                         const sql = PGDelegate.format(`
                             INSERT INTO roska_details (${Object.keys(detail).join(', ')})
-                            VALUES ({sid},{gid},{mid},{uid},{live},{earn},{pay},{handling_fee},{transition_fee});
+                            VALUES ({sid},{gid},{mid},{uid},{live},{profit}});
                         `, detail);
                         
                         promise_list.push(sql);
@@ -534,21 +523,20 @@ export = async function(fastify: FastifyInstance) {
 
                 {
                     // NOTE: 更新得標者資料
-                    const detail = {
+                    const detail:Partial<RoskaDetails> = {
                         sid, gid,
                         mid: winner_candidate.mid,
                         uid: winner_candidate.uid,
                         live: false,
-                        profit: total_earn,
-                        pay: 0,
-                        handling_fee: 0,
-                        transition_fee: 0,
+                        profit: winner_candidate.win_amount,
+                        handling_fee: handling_fee,
+                        transition_fee: winner_candidate.transition === 1? transition_fee: 0,
+                        interest_bonus: winner_candidate.transition === 1? interest_bonus: 0,
                     };
-                    total_earn += detail.pay - detail.handling_fee;
 
                     const sql = PGDelegate.format(`
                         INSERT INTO roska_details (${Object.keys(detail).join(', ')})
-                        VALUES ({sid},{gid},{mid},{uid},{live},{earn},{pay},{handling_fee},{transition_fee});
+                        VALUES ({sid},{gid},{mid},{uid},{live},{profit},{handling_fee},{transition_fee},{interest_bonus});
                     `, detail);
 
                     promise_list.push(sql);
@@ -562,7 +550,7 @@ export = async function(fastify: FastifyInstance) {
                             AND uid = {uid}
                             AND sid = {sid}
                         RETURNING *;`,
-                        Object.assign(winner_candidate, {win_amount:total_earn}));
+                        winner_candidate);
 
                     promise_list.push(member);
                 }
@@ -653,9 +641,10 @@ export = async function(fastify: FastifyInstance) {
             
             const sid = group_info.sid;
 
-            const {rows:users_bid_info} = await Postgres.query<RoskaBids>(`
-                SELECT  *
-                FROM    roska_bids
+            const {rows:users_bid_info} = await Postgres.query<RoskaBids&{win_amount:RoskaMembers['win_amount'], transition:RoskaMembers['transition']}>(`
+                SELECT  *, m.win_amount, m.transition
+                FROM  roska_bids b
+                INNER JOIN roska_members m ON m.uid = b.uid
                 WHERE   sid = $1 
                     AND gid = $2
                     AND uid = ANY($2);`, [sid, gid, [assign_to_uid, assign_from_uid]]);
@@ -683,14 +672,19 @@ export = async function(fastify: FastifyInstance) {
                 gid: group_info.gid,
                 mid: old_winner.mid,
                 uid: old_winner.uid,
-                bid_amount: old_winner.bid_amount
+                bid_amount: old_winner.bid_amount,
+                win_amount: 0,
+                transition: old_winner.transition
             }
+
             const winner_candidate:RoskaCandidate = {
                 sid: group_info.sid, 
                 gid: group_info.gid,
                 mid: new_winner.mid,
                 uid: new_winner.uid,
-                bid_amount: new_winner.bid_amount
+                bid_amount: new_winner.bid_amount,
+                win_amount: old_winner.win_amount,
+                transition: new_winner.transition
             }
             // NOTE: remvove old data
             {
@@ -703,7 +697,7 @@ export = async function(fastify: FastifyInstance) {
                     SET 
                         mid = {mid},
                         uid = {uid},
-
+                        win_amount = {win_amount}
                     WHERE
                         sid = {sid} AND
                         gid = {gid} AND
@@ -840,7 +834,7 @@ export = async function(fastify: FastifyInstance) {
                 } // for end
 
                 {
-                    const total_earn = cal_win_amount(handling_fee, transition_fee, interest_bonus, group_info.cycles, group_info.basic_unit_amount, group_info.bid_amount, gid, transition);
+                    const total_earn = cal_win_amount(handling_fee, transition_fee, interest_bonus, group_info.cycles, group_info.basic_unit_amount, group_info.bid_amount, gid, winner_candidate.transition);
                     // NOTE: 更新得標者資料
                     const detail = {
                         sid, gid,
@@ -848,15 +842,15 @@ export = async function(fastify: FastifyInstance) {
                         uid: winner_candidate.uid,
                         live: false,
                         profit: total_earn,
-                        pay: 0,
-                        handling_fee: 0,
-                        transition_fee: 0,
+                        handling_fee: winner_candidate.transition === 1? handling_fee: 0,
+                        transition_fee: winner_candidate.transition === 1? transition_fee: 0,
+                        interest_bonus: winner_candidate.transition === 1? interest_bonus: 0,
                     };
                    
 
                     const sql = PGDelegate.format(`
                         INSERT INTO roska_details (${Object.keys(detail).join(', ')})
-                        VALUES ({sid},{gid},{mid},{uid},{live},{earn},{pay},{handling_fee},{transition_fee});
+                        VALUES ({sid},{gid},{mid},{uid},{live},{profit},{handling_fee},{transition_fee},{interest_bonus});
                     `, detail);
 
                     promise_list.push(sql);

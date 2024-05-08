@@ -182,12 +182,19 @@ import { PGDelegate } from "pgdelegate";
     function cal_win_amount(base:number, bid_amount:number, T:number, trasfer:string) {
         const remain = cycles - T;
 
+        if (T >= 20)  trasfer = '0';
+
         switch (trasfer) {
             case '': {
                 return 0;
             }
             case '0': {
-                return (base * T) + ((base-bid_amount)*remain) - (250*cycles)
+                if (T < 20) {
+                    return (base * T) + ((base - bid_amount) * remain) - (handle_fee * T);
+                }
+                else {
+                    return (base * T) + ((base - bid_amount) * remain) - (handle_fee * T) - (base * remain);
+                }                
             }
             case '1': {
                 return (base-handle_fee)*T + Interest -trasfer_fee;
