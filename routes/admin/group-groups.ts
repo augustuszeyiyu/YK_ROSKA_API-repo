@@ -100,7 +100,7 @@ export = async function(fastify: FastifyInstance) {
             const first_member = PGDelegate.format(`
                 INSERT INTO roska_members (mid, sid, uid, gid, win_amount, win_time) 
                 VALUES({mid}, {sid}, {uid}, {gid}, {win_amount}, NOW());`, 
-                {mid, sid, uid:group_serial.uid, gid:`${sid}-t00`, win_amount: group_serial.basic_unit_amount * group_serial.member_count},
+                {mid, sid, uid:group_serial.uid, gid:`${sid}-t00`, win_amount: group_serial.basic_unit_amount * group_serial.cycles},
             );
             console.log(first_member);
             
