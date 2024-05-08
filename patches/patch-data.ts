@@ -18,6 +18,10 @@ import { PGDelegate } from "pgdelegate";
 (async()=>{
     await (await import('/index.db.js')).default();
 
+    const cycles      = 24;
+    const handle_fee  = 250;
+    const trasfer_fee = 300;
+    const Interest    = 1000;
     const filePath = path.resolve(__dirname, '../../patches/', 'YA1001-220701.csv');
     console.log(filePath);
     
@@ -48,120 +52,160 @@ import { PGDelegate } from "pgdelegate";
         const {rows:[count_members]} = await Postgres.query(`
             SELECT COUNT(*) FROM roska_members WHERE sid = $1;
         `, [sid]);
+        console.log(count_members);
+        
 
         const {rows:users} = await Postgres.query(`
             SELECT DISTINCT name, uid FROM users WHERE name=any($1);
         `, [names]);
+        console.log(users);
+        
 
 
         const insert_list:string[] = [];
         if (Number(count_members.count) > 0) {           
 
             for (const elm of csvData) {
+                if (elm.m.trim() === '00') continue;
+
                 for (const user of users) {
                     const bid_time = elm.bid_date.split('.');
                     const year = 1911 + Number(bid_time[0]);
                     const month = bid_time[1];
                     const day = bid_time[2];
-                    const format_date  = new Date(`${year}-${month}-${day}`);
-                    // console.log(format_date);
+                    const format_date  = formatDate(new Date(`${year}-${month}-${day}`));
 
                     if (elm.name === user.name) {
-                        const sql = PGDelegate.format(`
-                            UPDATE roaks_members
-                            SET uid={uid}, gid={gid}, bid_amount={bid_amount}, win_time={win_time}, win_amount={win_amount}
-                            WHERE sid={sid} AND mid={mid}
-                        `,{
-                            mid: `${sid}-${elm.m.trim()}`,
-                            uid: user.uid,
-                            sid,
-                            gid: elm.m.trim() !== '00'? `${sid}-t${elm.t}`: `${sid}-t00`, 
-                            bid_amount: elm.bid_amount,
-                            win_amount: Number(elm.m) === 0? elm.base * (csvData.length-1): 0,
-                            win_time: elm.bid_date !== ''? format_date.toISOString(): null,
-                            transition: elm.transition !== ''? elm.transition: '0',
-                            transit_to: elm.transition === '1'? users[0].uid: '',
-                            transit_gid: elm.transition === '1'? `${sid}-t00`: '', 
-                        });
-                        console.log(sql);
-                        insert_list.push(sql);
+                        const win_amount = cal_win_amount(elm.base, elm.bid_amount, Number(elm.t), elm.transition);
 
-                        const sql2 = PGDelegate.format(`
-                            UPDATE roaks_groups 
-                            SET uid={uid}, mid={mid}, bid_amount={bid_amount}, win_time={win_time}, win_amount={win_amount}
-                            WHERE sid={sid} AND gid={gid};
-                        `,{
-                            mid: `${sid}-${elm.m.trim()}`,
-                            sid,
-                            uid: user.uid,
-                            gid: elm.t !== ''? `${sid}-t${elm.t}`: '', 
-                            bid_amount: elm.bid_amount,
-                            win_time: elm.bid_date !== ''? format_date.toISOString(): null,
-                            win_amount: Number(elm.m) === 0? elm.base * (csvData.length-1): 0
-                        });
-                        console.log(sql2);
-                        insert_list.push(sql2);
+                        if (win_amount !== undefined && win_amount > 0) {                        
+                            const sql = PGDelegate.format(`
+                                UPDATE roska_members
+                                SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid}
+                                WHERE sid={sid} AND mid={mid};
+                            `,{
+                                mid: `${sid}-${elm.m.trim()}`,
+                                uid: user.uid,
+                                sid,
+                                gid: elm.m.trim() !== '00'? `${sid}-t${elm.t.padStart(2, '0')}`: `${sid}-t00`, 
+                                win_amount,
+                                win_time: elm.bid_date !== ''? format_date: null,
+                                transition: elm.transition !== ''? elm.transition: '0',
+                                transit_to: elm.transition === '1'? users[0].uid: '',
+                                transit_gid: elm.transition === '1'? `${sid}-t00`: '', 
+                            });
+                            console.log(sql);
+                            insert_list.push(sql);
+
+                            const sql2 = PGDelegate.format(`
+                                UPDATE roska_groups 
+                                SET uid={uid}, mid={mid}, bid_amount={bid_amount}, win_time={win_time}, win_amount={win_amount}
+                                WHERE sid={sid} AND gid={gid};
+                            `,{
+                                mid: `${sid}-${elm.m.trim()}`,
+                                sid,
+                                uid: user.uid,
+                                gid: `${sid}-t${elm.t.padStart(2, '0')}`,
+                                bid_amount: elm.bid_amount !== ''? elm.bid_amount: 0,
+                                win_time: elm.bid_date !== ''? format_date: null,
+                                win_amount
+                            });
+                            console.log(sql2);
+                            insert_list.push(sql2);
+                            break;
+                        }
                     }
                 }
             }
         }
-        else {
-            for (const elm of csvData) {
-                console.log(elm);
+
+        await Postgres.query(insert_list.join('\n'));
+        // else {
+            // for (const elm of csvData) {
+            //     if (elm.m.trim() === '00') continue;
                 
-                for (const user of users) {
-                    if (elm.name === user.name) {
-                        const bid_time = elm.bid_date.split('.');
-                        const year = 1911 + Number(bid_time[0]);
-                        const month = bid_time[1];
-                        const day = bid_time[2];
-                        const format_date  = new Date(`${year}-${month}-${day}`);
-                        // console.log(format_date);
+            //     for (const user of users) {
+            //         if (elm.name === user.name) {
+            //             const bid_time = elm.bid_date.split('.');
+            //             const year = 1911 + Number(bid_time[0]);
+            //             const month = bid_time[1];
+            //             const day = bid_time[2];
+            //             const format_date  = new Date(`${year}-${month}-${day}`);
+            //             // console.log(format_date);
                         
     
-                        const sql = PGDelegate.format(`
-                            INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
-                            VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid});
-                        `,{
-                            mid: `${sid}-${elm.m.trim()}`,
-                            uid: user.uid,
-                            sid,
-                            gid: elm.m.trim() !== '00'? `${sid}-t${elm.t}`: `${sid}-t00`, 
-                            win_amount: Number(elm.m) === 0? elm.base * (csvData.length-1): 0,
-                            win_time: elm.bid_date !== ''? format_date.toISOString(): null,
-                            transition: elm.transition !== ''? elm.transition: '0',
-                            transit_to: elm.transition === '1'? users[0].uid: '',
-                            transit_gid: elm.transition === '1'? `${sid}-t00`: '', 
-                        });
-                        console.log(sql);
+            //             const sql = PGDelegate.format(`
+            //                 INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
+            //                 VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid});
+            //             `,{
+            //                 mid: `${sid}-${elm.m.trim()}`,
+            //                 uid: user.uid,
+            //                 sid,
+            //                 gid: elm.m.trim() !== '00'? `${sid}-t${elm.t}`: `${sid}-t00`, 
+            //                 win_amount: Number(elm.m) === 0? elm.base * (csvData.length-1): 0,
+            //                 win_time: elm.bid_date !== ''? format_date: null,
+            //                 transition: elm.transition !== ''? elm.transition: '0',
+            //                 transit_to: elm.transition === '1'? users[0].uid: '',
+            //                 transit_gid: elm.transition === '1'? `${sid}-t00`: '', 
+            //             });
+            //             console.log(sql);
                         
-                        insert_list.push(sql);
+            //             insert_list.push(sql);
     
-                        const sql2 = PGDelegate.format(`
-                            UPDATE roaks_groups 
-                            SET uid={uid}, mid={mid}, bid_amount={bid_amount}, win_time={win_time}, win_amount={win_amount}
-                            WHERE sid={sid} AND gid={gid};
-                        `,{
-                            mid: `${sid}-${elm.m.trim()}`,
-                            sid,
-                            uid: user.uid,
-                            gid: elm.t !== ''? `${sid}-t${elm.t}`: '', 
-                            bid_amount: elm.bid_amount,
-                            win_time: elm.bid_date !== ''? format_date.toISOString(): null,
-                            win_amount: Number(elm.m) === 0? elm.base * (csvData.length-1): 0
-                        });
-                        console.log(sql2);
-                        insert_list.push(sql2);
-                    }
-                }           
-            }
-    
-        }
+            //             const sql2 = PGDelegate.format(`
+            //                 UPDATE roaks_groups 
+            //                 SET uid={uid}, mid={mid}, bid_amount={bid_amount}, win_time={win_time}, win_amount={win_amount}
+            //                 WHERE sid={sid} AND gid={gid};
+            //             `,{
+            //                 mid: `${sid}-${elm.m.trim()}`,
+            //                 sid,
+            //                 uid: user.uid,
+            //                 gid: elm.t !== ''? `${sid}-t${elm.t}`: '', 
+            //                 bid_amount: elm.bid_amount,
+            //                 win_time: elm.bid_date !== ''? format_date: null,
+            //                 win_amount: Number(elm.m) === 0? elm.base * (csvData.length-1): 0
+            //             });
+            //             console.log(sql2);
+            //             insert_list.push(sql2);
+            //         }
+            //     }           
+            // }    
+        // }
         
         // console.log(insert_list);
     })
     .on('error', (err) => {
         // Handle any errors that occur during CSV parsing
         console.error('Error while parsing CSV:', err);
-    });    
+    });
+
+    function cal_win_amount(base:number, bid_amount:number, T:number, trasfer:string) {
+        const remain = cycles - T;
+
+        switch (trasfer) {
+            case '': {
+                return 0;
+            }
+            case '0': {
+                return (base * T) + ((base-bid_amount)*remain) - (250*cycles)
+            }
+            case '1': {
+                return (base-handle_fee)*T + Interest -trasfer_fee;
+            }
+        }
+    }
+    function formatDate(date:Date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = '18';
+        const minutes = '30';
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        const timezoneOffset = date.getTimezoneOffset();
+        const offsetHours = Math.abs(Math.floor(timezoneOffset / 60)).toString().padStart(2, '0');
+        const offsetMinutes = (Math.abs(timezoneOffset) % 60).toString().padStart(2, '0');
+        const offsetSign = timezoneOffset > 0 ? '-' : '+';
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
+    }
 })().catch(e=>Promise.resolve(e));
