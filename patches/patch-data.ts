@@ -134,7 +134,8 @@ import { PGDelegate } from "pgdelegate";
                     }
                 }
             }
-            else {
+            else 
+            if (Number(count_members.count) === 1) {
                 for (const elm of csvData_obj[sid]) {
                     if (elm.m.trim() === '00') continue;
     
@@ -186,9 +187,10 @@ import { PGDelegate } from "pgdelegate";
                             
                             break;
                         }
-                    }           
-                }    
-            }
+                    }
+                }
+            } // end if
+
 
             console.log('insert_list count:', insert_list.length);
             // await Postgres.query(insert_list.join('\n'));
