@@ -65,10 +65,9 @@ import { PGDelegate } from "pgdelegate";
                 SELECT * FROM roska_groups WHERE sid = $1;
             `, [sid]);
     
-            const {rows:[count_members]} = await Postgres.query(`
-                SELECT COUNT(*) FROM roska_members WHERE sid = $1;
-            `, [sid]);
-            console.log(count_members);
+            const count_members_sql = PGDelegate.format(`SELECT COUNT(*) FROM roska_members WHERE sid = {sid};`, {sid});
+            const {rows:[count_members]} = await Postgres.query(count_members_sql);
+            console.log(count_members_sql, count_members);
             
     
             const {rows:users} = await Postgres.query(`
@@ -152,7 +151,8 @@ import { PGDelegate } from "pgdelegate";
         
                             const sql = PGDelegate.format(`
                                 INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
-                                VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid});
+                                VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid})
+                                ON CONFLICT (mid, uid, sid) DO NOTHING;
                             `,{
                                 mid: `${sid}-${elm.m.trim()}`,
                                 uid: user.uid,
@@ -193,7 +193,7 @@ import { PGDelegate } from "pgdelegate";
 
 
             console.log('insert_list count:', insert_list.length);
-            // await Postgres.query(insert_list.join('\n'));
+            await Postgres.query(insert_list.join('\n'));
         }
     })
     .on('error', (err) => {
@@ -201,6 +201,9 @@ import { PGDelegate } from "pgdelegate";
         console.error('Error while parsing CSV:', err);
     });
 
+
+
+    
     function cal_win_amount(base:number, bid_amount:number, T:number, trasfer:string) {
         const remain = cycles - T;
 
