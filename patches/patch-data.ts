@@ -159,7 +159,7 @@ import { PGDelegate } from "pgdelegate";
                                 sid,
                                 gid: elm.t !== ''? `${sid}-t${elm.t.padStart(2, '0')}`: ``, 
                                 win_amount,
-                                win_time: elm.bid_date !== ''? format_date: null,
+                                win_time: elm.bid_date !== '' && elm.t !== ''? format_date: null,
                                 transition: elm.transition !== ''? elm.transition: '0',
                                 transit_to: elm.transition === '1'? users[0].uid: '',
                                 transit_gid: elm.transition === '1'? `${sid}-t00`: '', 
