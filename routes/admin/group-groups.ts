@@ -499,8 +499,6 @@ export = async function(fastify: FastifyInstance) {
                             uid: member.uid,
                             live: false,
                             profit: -basic_unit_amount,
-                            handling_fee: 0,
-                            transition_fee: 0,
                         };
 
                         const sql = PGDelegate.format(`
@@ -545,8 +543,6 @@ export = async function(fastify: FastifyInstance) {
                         transition_fee: winner_candidate.transition === 1? transition_fee: 0,
                         interest_bonus: winner_candidate.transition === 1? interest_bonus: 0,
                     };
-
-
                     const sql = PGDelegate.format(`
                         INSERT INTO roska_details (${Object.keys(detail).join(', ')})
                         VALUES ({sid},{gid},{mid},{uid},{live},{profit},{handling_fee},{transition_fee},{interest_bonus})
@@ -793,15 +789,13 @@ export = async function(fastify: FastifyInstance) {
                             uid: member.uid,
                             live: false,
                             profit: 0,
-                            pay: basic_unit_amount,
-                            handling_fee: 0,
-                            transition_fee: 0,
+                            pay: basic_unit_amount
                         };
-                        total_earn += detail.pay - detail.handling_fee;
+                        total_earn += detail.pay
 
                         const sql = PGDelegate.format(`
                             INSERT INTO roska_details (${Object.keys(detail).join(', ')})
-                            VALUES ({sid},{gid},{mid},{uid},{live},{earn},{pay},{handling_fee},{transition_fee});
+                            VALUES ({sid},{gid},{mid},{uid},{live},{earn},{pay});
                         `, detail);
                         
                         promise_list.push(sql);
