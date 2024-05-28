@@ -85,8 +85,12 @@ export class BaseError {
 		msg:'Related data is missing unexpectedly'
 	};
 	public static DB_INSERTION_FAILURE:HuntErrorItem = {
-		status:500, code:'api#base#db-insertin-failure',
-		msg:'Cannot insert new file info!'
+		status:500, code:'api#base#db-insertion-failure',
+		msg:'Cannot insert new info!'
+	}
+	public static DB_UPDATE_FAILURE:HuntErrorItem = {
+		status:500, code:'api#base#db-updata-failure',
+		msg:'Cannot update info!'
 	}
 	public static DB_DELETION_FAILURE:HuntErrorItem = {
 		status:500, code:'api#base#db-insertin-failure',

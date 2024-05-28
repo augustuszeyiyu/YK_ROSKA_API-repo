@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS roska_details (
     mid 					    VARCHAR(20)		    NOT NULL,    
     uid                         VARCHAR(32)         NOT NULL,
     live                        BOOLEAN             NOT NULL DEFAULT true,
-    bid_amount                  DECIMAL             NOT NULL DEFAULT 0,
     profit                      DECIMAL             NOT NULL DEFAULT 0,
     handling_fee                DECIMAL             NOT NULL DEFAULT 0,
     transition_fee              DECIMAL             NOT NULL DEFAULT 0,
@@ -22,5 +21,5 @@ CREATE TABLE IF NOT EXISTS roska_details (
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     PRIMARY KEY (gid, sid, mid, uid),
     FOREIGN KEY (sid) REFERENCES roska_serials(sid),
-    FOREIGN KEY (mid) REFERENCES users(uid)
+    FOREIGN KEY (uid) REFERENCES users(uid)
 );
