@@ -7,7 +7,7 @@ import path from "path";
 // Type to the configurable fiels
 export interface ConfigFormat {
 	show_log?:boolean; swagger_active?:boolean;
-	serve_at?: { host:string; port:number; url:string; };
+	serve_at?: { host:string; port:number; url:string; api:string, admin:string };
 	postgres?: {
 		uri:string;
 		max?:number;
@@ -26,7 +26,7 @@ export interface ConfigFormat {
 // The default values
 const config:Required<ConfigFormat> = {
 	show_log:true, swagger_active:true,
-	serve_at: { host:'localhost', port:33688, url:'https://www.roska-ya.net'},
+	serve_at: { host:'localhost', port:33688, url:'https://www.roska-ya.net', api: 'https://admin.yaresg.com/', admin:'https://admin.yaresg.com/'},
 	postgres: { 
 		uri:'postgres://roska:036688231@172.30.2.161/yk5_roska', 
 		max: 15
