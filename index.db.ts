@@ -29,7 +29,7 @@ export default async function() {
 	}
 	console.log("Check Table sysvar exist or not");
 	{
-		const {rows:[row]} = await PostgreFactory.query(`SELECT to_regclass('public.sysvar');`);
+		const {rows:[row]} = await PostgreFactory.query(`SELECT to_regclass('sysvar');`);
 		if (row.to_regclass === null) {
 			console.log("Table sysvar doesn not exist. Create now...");
 
