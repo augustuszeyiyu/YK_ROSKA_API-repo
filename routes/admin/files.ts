@@ -385,9 +385,10 @@ export = async function(fastify: FastifyInstance) {
                         const gid_number = Number.isNaN(gid_string) === false? Number(gid_string): 0;
                        
                         
-                        let live_pay = 0, die_pay = 0;                
+                        let live_pay = 0, die_pay = 0, transition = '';                
                         if (gid_number > 0)  {
                             die_pay = Number(elm.basic_unit_amount);
+                            transition = elm.transition === 1? '轉讓': '全收';
                         }
                         else {
                             live_pay = Number(elm.basic_unit_amount) - 1000;
@@ -403,7 +404,7 @@ export = async function(fastify: FastifyInstance) {
                             live_pay, die_pay,
                             taiwan_date: elm.taiwan_date,
                             win_gid: gid_number > 0? `第 ${gid_number} 標`: '',
-                            transition: elm.transition === 1? '轉讓': '全收'
+                            transition
                         });
                     } // end for
 

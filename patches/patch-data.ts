@@ -23,7 +23,7 @@ import { PGDelegate } from "pgdelegate";
     const handle_fee  = 250;
     const trasfer_fee = 300;
     const Interest    = 1000;
-    const filePath = path.resolve(__dirname, '../../patches/', '120-128.csv');
+    const filePath = path.resolve(__dirname, '../../patches/', '41-50.csv');
     console.log(filePath);
     
 
@@ -93,9 +93,11 @@ import { PGDelegate } from "pgdelegate";
     
                             if (win_amount !== undefined && win_amount > 0) {                        
                                 const sql = PGDelegate.format(`
-                                    UPDATE roska_members
-                                    SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid}
-                                    WHERE sid={sid} AND mid={mid};
+                                    INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
+                                    VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid})
+                                    ON CONFLICT (mid, uid, sid) 
+                                    DO UPDATE
+                                    SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid};
                                 `,{
                                     mid: `${sid}-${elm.m.trim()}`,
                                     uid: user.uid,
@@ -152,7 +154,9 @@ import { PGDelegate } from "pgdelegate";
                             const sql = PGDelegate.format(`
                                 INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
                                 VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid})
-                                ON CONFLICT (mid, uid, sid) DO NOTHING;
+                                ON CONFLICT (mid, uid, sid) 
+                                DO UPDATE
+                                SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid};
                             `,{
                                 mid: `${sid}-${elm.m.trim()}`,
                                 uid: user.uid,
