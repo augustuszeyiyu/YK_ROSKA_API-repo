@@ -23,7 +23,7 @@ import { PGDelegate } from "pgdelegate";
     const handle_fee  = 250;
     const trasfer_fee = 300;
     const Interest    = 1000;
-    const filePath = path.resolve(__dirname, '../../patches/', '41-50.csv');
+    const filePath = path.resolve(__dirname, '../../patches/', '1-10.csv');
     console.log(filePath);
     
 
@@ -130,6 +130,27 @@ import { PGDelegate } from "pgdelegate";
                                     insert_list.push(sql2);
                                 }                               
                                 break;
+                            }
+                            else {
+                                const sql = PGDelegate.format(`
+                                    INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
+                                    VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid})
+                                    ON CONFLICT (mid, uid, sid) 
+                                    DO UPDATE
+                                    SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid};
+                                `,{
+                                    mid: `${sid}-${elm.m.trim()}`,
+                                    uid: user.uid,
+                                    sid,
+                                    gid: ``, 
+                                    win_amount: 0,
+                                    win_time: null,
+                                    transition: '0',
+                                    transit_to: '',
+                                    transit_gid: '', 
+                                });
+                                console.log(sql);
+                                insert_list.push(sql);
                             }
                         }
                     }

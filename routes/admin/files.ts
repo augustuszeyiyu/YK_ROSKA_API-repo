@@ -138,12 +138,12 @@ export = async function(fastify: FastifyInstance) {
             res.status(200).send({url:`${Config.serve_at.admin}/public/${newFilename}`});
         });
 	}
-    /** /api/file/bid-opening-record **/
+    /** GET　/api/file/bid-opening-record **/
     {
         const schema = {
 			description: '產開標紀錄 excel 表',
 			summary: '產開標紀錄 excel 表',
-            body: {
+            params: {
                 type: 'object',
                 properties: {
                     sid: { type: 'string'},
@@ -154,11 +154,11 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         //@ts-ignore
-		fastify.post<{Body:{sid:RoskaSerials['sid']}}>('/file/bid-opening-record', {schema}, async (req, res) => {
+		fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/file/bid-opening-record/:sid', {schema}, async (req, res) => {
             const {uid} = req.session.token!;
             console.log(req);
             
-            const {sid} = req.body;
+            const {sid} = req.params;
 
             const {rows:report_info} = await Postgres.query(`
                 SELECT 
@@ -282,19 +282,19 @@ export = async function(fastify: FastifyInstance) {
             res.status(200).send({url:`${Config.serve_at.admin}/public/${newFilename}`});
         });
     }
-    /** /api/file/latest-bid-opening-record **/
+    /** GET /api/file/latest-bid-opening-record **/
     {
         const schema = {
 			description: '產所有開標紀錄 excel 表',
 			summary: '產所有開標紀錄 excel 表',
-            body: {
+            param: {
                 type: 'object',
             },
             security: [{ bearerAuth: [] }],
 		};
 
         //@ts-ignore
-		fastify.post('/file/latest-bid-opening-record', {schema}, async (req, res) => {
+		fastify.get('/file/latest-bid-opening-record', {schema}, async (req, res) => {
             const {uid} = req.session.token!;
 
             const filePath: string[] = [];
