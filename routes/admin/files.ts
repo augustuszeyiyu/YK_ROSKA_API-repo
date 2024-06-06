@@ -392,7 +392,7 @@ export = async function(fastify: FastifyInstance) {
                         else {
                             live_pay = Number(elm.basic_unit_amount) - 1000;
                         }
-                        // console.log({gid_number, bit_amount:elm.bid_amount, live_pay, die_pay});
+                        console.log({gid_number, bit_amount:elm.bid_amount, live_pay, die_pay, transition: elm.transition});
                         
                 
 
@@ -403,7 +403,7 @@ export = async function(fastify: FastifyInstance) {
                             live_pay, die_pay,
                             taiwan_date: elm.taiwan_date,
                             win_gid: gid_number > 0? `第 ${gid_number} 標`: '',
-                            transitiona: elm.transition === 1? '轉讓': '全收'
+                            transition: elm.transition === 1? '轉讓': '全收'
                         });
                     } // end for
 
