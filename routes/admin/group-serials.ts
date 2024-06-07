@@ -287,20 +287,22 @@ export = async function(fastify: FastifyInstance) {
                 SELECT COUNT(*) FROM roska_serials 
                 WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time;`;
             let sql = `
-                SELECT *, 
+                SELECT u.name, s.*,
                     (
-                        SELECT gid 
-                        FROM roska_groups
-                        WHERE sid = s.sid AND mid <> ''
+                        SELECT json_build_object('gid', g.gid, 'mid', g.mid, 'uid', g.uid, 'name', u.name)
+                        FROM roska_groups g
+                        INNER JOIN users u ON g.uid = u.uid
+                        WHERE sid = s.sid AND mid <> ''                        
                         ORDER BY gid DESC LIMIT 1
                     ) as prev_gid, 
                     (
-                        SELECT gid
-                        FROM roska_groups
+                        SELECT json_build_object('gid', g.gid)
+                        FROM roska_groups g
                         WHERE sid = s.sid AND mid = ''
                         ORDER BY gid ASC LIMIT 1
                     ) as next_gid 
                 FROM roska_serials s
+                INNER JOIN users u ON s.uid = u.uid
                 WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time
                 ORDER BY sid ${_order} `;
             const val:any[] = [];
