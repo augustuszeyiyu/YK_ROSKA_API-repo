@@ -170,7 +170,7 @@ export = async function(fastify:FastifyInstance) {
             properties: {
                 uid: {type:"string"},
             },
-			required:["user_id"]
+			required:["uid"]
         };
         const schema = {
             description: '管理者搜尋使用者個人資料',
