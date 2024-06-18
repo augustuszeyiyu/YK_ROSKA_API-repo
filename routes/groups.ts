@@ -25,17 +25,6 @@ export = async function(fastify: FastifyInstance) {
 
             const {uid} = req.session.token!;
 
-            const {rows:SYSVARS} = await Postgres.query<SysVar>(`
-                SELECT * 
-                FROM sysvar 
-                WHERE key in ($1, $2, $3)
-                ORDER BY key ASC;`, ['handling_fee', 'transition_fee', 'Interest_bonus']);
-
-            const handling_fee = Number(SYSVARS[0].value);
-            const transition_fee = Number(SYSVARS[1].value);
-            const Interest_bonus = Number(SYSVARS[2].value);
-
-
             const {rows:user_transition_info} = await Postgres.query<{
                 sid:RoskaMembers['sid'], 
                 basic_unit_amount: RoskaSerials['basic_unit_amount'],
@@ -47,35 +36,29 @@ export = async function(fastify: FastifyInstance) {
                 group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
             }>(`
                 SELECT DISTINCT 
-                    m.sid, 
-                    s.basic_unit_amount,
-                    s.cycles,
-                    m.transition,
-                    m.transit_to,
-                    m.transit_gid,
-                    0::integer as total,
-                    COALESCE(
-                        (
-                            SELECT
-                                jsonb_agg( jsonb_build_object(
-                                    'gid', rg.gid, 
-                                    'sid', rg.sid,
-                                    'mid', rg.mid,
-                                    'uid', rg.uid,
-                                    'bid_amount', rg.bid_amount,
-                                    'win', (
-                                        CASE WHEN 
-                                            rg.uid = m.uid
-                                        THEN true
-                                        ELSE false
-                                        END),
-                                    'subtotal', 0::integer
-                                ) ORDER BY rg.gid, rg.sid)
-                            FROM 
-                                roska_groups rg
-                            WHERE 
-                                rg.sid = m.sid AND rg.mid <> ''
-                        ), '[]'::jsonb) AS group_info
+                m.sid, 
+                s.basic_unit_amount,
+                s.cycles,
+                m.transition,
+                m.transit_to,
+                m.transit_gid,
+                COALESCE(
+                    (
+                        SELECT
+                            jsonb_agg( jsonb_build_object(
+                                'gid', rg.gid, 
+                                'bid_amount', rg.bid_amount,
+                                'win_amount', (CASE 
+                                    WHEN rg.gid = m.gid THEN rg.win_amount 
+                                    WHEN rg.gid < m.gid THEN s.basic_unit_amount - rg.bid_amount
+                                    ELSE s.basic_unit_amount END)
+                            ) ORDER BY rg.gid, rg.sid)
+                        FROM 
+                            roska_groups rg
+                        WHERE 
+                            rg.sid = m.sid AND 
+                            rg.mid <> ''
+                    ), '[]'::jsonb) AS group_info
                 FROM 
                     roska_members m
                 INNER JOIN 
@@ -83,62 +66,8 @@ export = async function(fastify: FastifyInstance) {
                 WHERE 
                     m.uid = $1
                 ORDER BY 
-                    m.sid;`, [uid]);
+                m.sid;`, [uid]);
 
-
-            for (const t of user_transition_info) {
-                let dead = false;
-                for (const g of t.group_info) {
-                    
-                    if (t.transition === 0) {
-                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
-                            continue;
-                        }
-                        else
-                        if (g.gid!.indexOf('-t00') > 1) {
-                            g.subtotal =  Number(t.basic_unit_amount);
-                            t.total += g.subtotal;
-                        }
-                        else
-                        if (dead === false) {
-                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
-                            t.total += g.subtotal;
-                        }
-                        if (dead === true) {
-                            g.subtotal =  Number(t.basic_unit_amount);
-                            t.total += g.subtotal;
-                        }
-                        else 
-                        if (g.win === true) {
-                            dead = true;
-                            continue;
-                        }
-                    }
-                    else
-                    if (t.transition === 1) {
-                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
-                            continue;
-                        }
-                        else
-                        if (g.gid!.indexOf('-t00') > 1) {
-                            g.subtotal =  Number(t.basic_unit_amount);
-                            t.total += g.subtotal;
-                        }
-                        else
-                        if (dead === false) {
-                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
-                            t.total += g.subtotal;
-                        }
-                        else 
-                        if (g.win === true) {
-                            dead = true;
-                            g.subtotal = (t.cycles * handling_fee) - transition_fee + Interest_bonus;
-                            t.total += g.subtotal;
-                            break;
-                        }
-                    }                     
-                }                
-            }
 
             return res.status(200).send(user_transition_info);
         });
@@ -167,16 +96,6 @@ export = async function(fastify: FastifyInstance) {
             const {year, month} = req.params;
             console.log({year, month});
 
-            const {rows:SYSVARS} = await Postgres.query<SysVar>(`
-                SELECT * 
-                FROM sysvar 
-                WHERE key in ($1, $2, $3)
-                ORDER BY key ASC;`, ['handling_fee', 'transition_fee', 'Interest_bonus']);
-
-            const handling_fee = Number(SYSVARS[0].value);
-            const transition_fee = Number(SYSVARS[1].value);
-            const Interest_bonus = Number(SYSVARS[2].value);
-
 
             const {rows:user_transition_info} = await Postgres.query<{
                 sid:RoskaMembers['sid'], 
@@ -195,23 +114,16 @@ export = async function(fastify: FastifyInstance) {
                     m.transition,
                     m.transit_to,
                     m.transit_gid,
-                    0::integer as total,
                     COALESCE(
                         (
                             SELECT
                                 jsonb_agg( jsonb_build_object(
                                     'gid', rg.gid, 
-                                    'sid', rg.sid,
-                                    'mid', rg.mid,
-                                    'uid', rg.uid,
                                     'bid_amount', rg.bid_amount,
-                                    'win', (
-                                        CASE WHEN 
-                                            rg.uid = m.uid
-                                        THEN true
-                                        ELSE false
-                                        END),
-                                    'subtotal', 0::integer
+                                    'win_amount', (CASE 
+                                        WHEN rg.gid = m.gid THEN rg.win_amount 
+                                        WHEN rg.gid < m.gid THEN s.basic_unit_amount - rg.bid_amount
+                                        ELSE s.basic_unit_amount END)
                                 ) ORDER BY rg.gid, rg.sid)
                             FROM 
                                 roska_groups rg
@@ -230,60 +142,6 @@ export = async function(fastify: FastifyInstance) {
                 ORDER BY 
                     m.sid;`, [uid, year, month]);
 
-
-            for (const t of user_transition_info) {
-                let dead = false;
-                for (const g of t.group_info) {
-                    
-                    if (t.transition === 0) {
-                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
-                            continue;
-                        }
-                        else
-                        if (g.gid!.indexOf('-t00') > 1) {
-                            g.subtotal =  Number(t.basic_unit_amount);
-                            t.total += g.subtotal;
-                        }
-                        else
-                        if (dead === false) {
-                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
-                            t.total += g.subtotal;
-                        }
-                        if (dead === true) {
-                            g.subtotal =  Number(t.basic_unit_amount);
-                            t.total += g.subtotal;
-                        }
-                        else 
-                        if (g.win === true) {
-                            dead = true;
-                            continue;
-                        }
-                    }
-                    else
-                    if (t.transition === 1) {
-                        if (g.gid!.indexOf('-t00') > 1 && g.uid === uid) {
-                            continue;
-                        }
-                        else
-                        if (g.gid!.indexOf('-t00') > 1) {
-                            g.subtotal =  Number(t.basic_unit_amount);
-                            t.total += g.subtotal;
-                        }
-                        else
-                        if (dead === false) {
-                            g.subtotal = Number(t.basic_unit_amount)-Number(g.bid_amount);
-                            t.total += g.subtotal;
-                        }
-                        else 
-                        if (g.win === true) {
-                            dead = true;
-                            g.subtotal = (t.cycles * handling_fee) - transition_fee + Interest_bonus;
-                            t.total += g.subtotal;
-                            break;
-                        }
-                    }                     
-                }                
-            }
 
             return res.status(200).send(user_transition_info);
         });
