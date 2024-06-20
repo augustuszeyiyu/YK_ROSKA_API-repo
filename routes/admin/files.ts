@@ -445,7 +445,7 @@ export = async function(fastify: FastifyInstance) {
                 `, insert_data);
                 await Postgres.query(sql);
 
-                filePath.push(`${Config.serve_at.admin}/public/${newFilename}`);
+                filePath.push(`${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`);
 
             } // end while
 
