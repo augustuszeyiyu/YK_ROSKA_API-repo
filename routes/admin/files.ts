@@ -248,7 +248,7 @@ export = async function(fastify: FastifyInstance) {
 
             // check if file exists or not
             const uploadDir = Config.storage_root;
-            const newFilename = `開標紀錄-${sid}.xlsx`;
+            const newFilename = `open-bid-report-${sid}.xlsx`;
             const newFilePath = path.resolve(uploadDir, newFilename);
 
             await Postgres.query(`
@@ -279,7 +279,7 @@ export = async function(fastify: FastifyInstance) {
 
 
 
-            res.status(200).send({url:`${Config.serve_at.admin}/public/${newFilename}`});
+            res.status(200).send({url:`${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`});
         });
     }
     /** GET /api/file/latest-bid-opening-record **/
@@ -415,7 +415,7 @@ export = async function(fastify: FastifyInstance) {
 
                 // check if file exists or not
                 const uploadDir = Config.storage_root;
-                const newFilename = `開標紀錄-${report_info_list[0].sid}-${report_info_list[report_info_list.length-1].sid}.xlsx`;
+                const newFilename = `open-bid-report-${report_info_list[0].sid}-${report_info_list[report_info_list.length-1].sid}.xlsx`;
                 const newFilePath = path.resolve(uploadDir, newFilename);
                                     
 
