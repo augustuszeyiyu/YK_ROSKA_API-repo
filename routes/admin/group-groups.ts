@@ -81,7 +81,7 @@ export = async function(fastify: FastifyInstance) {
                     group_sql_list.push(PGDelegate.format(`
                         INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
                         VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')})
-                        ON CONFICT DO NOTHIN;`, payload)
+                        ON CONFLICT DO NOTHING;`, payload)
                     )
                     console.log(group_sql_list);
                     
@@ -92,7 +92,7 @@ export = async function(fastify: FastifyInstance) {
                     group_sql_list.push(PGDelegate.format(`
                         INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
                         VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')})
-                        ON CONFICT DO NOTHIN;`, payload)
+                        ON CONFLICT DO NOTHING;`, payload)
                     );
                 }
             }
@@ -102,7 +102,7 @@ export = async function(fastify: FastifyInstance) {
             const first_member = PGDelegate.format(`
                 INSERT INTO roska_members (mid, sid, uid, gid, win_amount, win_time) 
                 VALUES({mid}, {sid}, {uid}, {gid}, {win_amount}, NOW())
-                ON CONFICT DO NOTHING;`, 
+                ON CONFLICT DO NOTHING;`, 
                 {mid, sid, uid:group_serial.uid, gid:`${sid}-t00`, win_amount: group_serial.basic_unit_amount * group_serial.cycles},
             );
             console.log(first_member);
