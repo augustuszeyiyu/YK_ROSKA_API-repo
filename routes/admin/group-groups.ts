@@ -621,13 +621,12 @@ export = async function(fastify: FastifyInstance) {
 
 
             const {rows:[assign_new_winner]} = await Postgres.query<RoskaBids>(`
-                    INSERT INTO roska_bids(mid, uid, gid, sid, bid_amount, win)
-                    VALUES ($1, $2, $3, $4, 1000, true)
-                    ON CONFLICT (mid, uid, gid, sid) 
-                    DO UPDATE
-                    SET win=true
-                    RETURNING *;`, [assign_user_info.mid, assign_user_info.uid, gid, assign_user_info.sid]);
-            
+                INSERT INTO roska_bids(mid, uid, gid, sid, bid_amount, win)
+                VALUES ($1, $2, $3, $4, 1000, true)
+                ON CONFLICT (mid, uid, gid, sid) 
+                DO UPDATE   SET win=true
+                RETURNING *;`, [assign_user_info.mid, assign_user_info.uid, gid, assign_user_info.sid]);
+                            
          
             return res.status(200).send(assign_new_winner);
         })
