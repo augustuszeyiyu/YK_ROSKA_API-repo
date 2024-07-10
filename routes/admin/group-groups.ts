@@ -596,7 +596,7 @@ export = async function(fastify: FastifyInstance) {
                 type: 'object',
                 properties:{
                     gid: {type: 'string'},
-                    assign_to_mid: {type: 'string'},                    
+                    assign_to_mid: {type: 'string'},
                 },
                 required:["gid", "assign_to_mid"],
             },
