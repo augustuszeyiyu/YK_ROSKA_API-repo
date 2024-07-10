@@ -596,15 +596,15 @@ export = async function(fastify: FastifyInstance) {
                 type: 'object',
                 properties:{
                     gid: {type: 'string'},
-                    assign_to_uid: {type: 'string'},                    
+                    assign_to_mid: {type: 'string'},                    
                 },
-                required:["gid", "assign_to_uid"],
+                required:["gid", "assign_to_mid"],
             },
             security: [{ bearerAuth: [] }],
         };
 
-        fastify.post<{Body:{gid:RoskaGroups['gid'], assign_to_uid:RoskaMembers['uid']}}>('/group/bid/assign', {schema}, async (req, res)=>{
-            const {gid, assign_to_uid} = req.body;
+        fastify.post<{Body:{gid:RoskaGroups['gid'], assign_to_mid:RoskaMembers['uid']}}>('/group/bid/assign', {schema}, async (req, res)=>{
+            const {gid, assign_to_mid} = req.body;
             
             await Postgres.query<RoskaBids>(`
                 UPDATE  roska_bids
@@ -616,8 +616,9 @@ export = async function(fastify: FastifyInstance) {
             const {rows:[assign_user_info]} = await Postgres.query<RoskaMembers>(`
                 SELECT * 
                 FROM roska_members 
-                WHERE uid=$1 AND gid=$2;
-            `, [assign_to_uid, gid]);
+                WHERE mid = $1;
+            `, [assign_to_mid]);
+            console.log(assign_user_info);            
 
 
             const {rows:[assign_new_winner]} = await Postgres.query<RoskaBids>(`
@@ -626,7 +627,7 @@ export = async function(fastify: FastifyInstance) {
                     ON CONFLICT (mid, uid, gid, sid) 
                     DO UPDDATE 
                     SET win=true
-                    RETURNING *;`, [assign_user_info.mid, assign_user_info.uid, assign_user_info.gid, assign_user_info.sid]);
+                    RETURNING *;`, [assign_user_info.mid, assign_user_info.uid, gid, assign_user_info.sid]);
             
          
             return res.status(200).send(assign_new_winner);
