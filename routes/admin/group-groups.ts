@@ -587,11 +587,11 @@ export = async function(fastify: FastifyInstance) {
             }
         });
     }
-    /** 指定得標者 **/
+    /** 開標前指定得標者 **/
     {
         const schema = {
-            description: '指定得標者',
-            summary: '指定得標者',
+            description: '開標前指定得標者',
+            summary: '開標前指定得標者',
             body: {
                 type: 'object',
                 properties:{
@@ -606,19 +606,27 @@ export = async function(fastify: FastifyInstance) {
         fastify.post<{Body:{gid:RoskaGroups['gid'], assign_to_uid:RoskaMembers['uid']}}>('/group/bid/assign', {schema}, async (req, res)=>{
             const {gid, assign_to_uid} = req.body;
             
-            const {rows:remove_old_winner} = await Postgres.query<RoskaBids>(`
+            await Postgres.query<RoskaBids>(`
                 UPDATE  roska_bids
                 SET     win = false
                 WHERE   gid = $1 
                     AND win = true;`, [gid]);
 
+            
+            const {rows:[assign_user_info]} = await Postgres.query<RoskaMembers>(`
+                SELECT * 
+                FROM roska_members 
+                WHERE uid=$1 AND gid=$2;
+            `, [assign_to_uid, gid]);
+
 
             const {rows:[assign_new_winner]} = await Postgres.query<RoskaBids>(`
-                    UPDATE  roska_bids
-                    SET     win = true
-                    WHERE   gid = $1 
-                        AND uid = $2
-                    RETURNING *;`, [gid, assign_to_uid]);
+                    INSERT INTO roska_bids(mid, uid, gid, sid, bid_amount, win)
+                    VALUES ($1, $2, $3, $4, 1000, true)
+                    ON CONFLICT (mid, uid, gid, sid) 
+                    DO UPDDATE 
+                    SET win=true
+                    RETURNING *;`, [assign_user_info.mid, assign_user_info.uid, assign_user_info.gid, assign_user_info.sid]);
             
          
             return res.status(200).send(assign_new_winner);
