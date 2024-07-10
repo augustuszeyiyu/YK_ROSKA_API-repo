@@ -435,7 +435,7 @@ export = async function(fastify: FastifyInstance) {
                     WHERE
                         gid = {gid} AND
                         sid = {sid} AND
-                        NOW() > bid_end_time
+                        NOW() >= bid_start_time
                     RETURNING *;`, 
                     winner_candidate
                 );
@@ -626,7 +626,7 @@ export = async function(fastify: FastifyInstance) {
                 ON CONFLICT (mid, uid, gid, sid) 
                 DO UPDATE   SET win=true
                 RETURNING *;`, [assign_user_info.mid, assign_user_info.uid, gid, assign_user_info.sid]);
-                            
+
          
             return res.status(200).send(assign_new_winner);
         })
