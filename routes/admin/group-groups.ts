@@ -618,7 +618,6 @@ export = async function(fastify: FastifyInstance) {
                 FROM roska_members 
                 WHERE mid = $1;
             `, [assign_to_mid]);
-            console.log(assign_user_info);            
 
 
             const {rows:[assign_new_winner]} = await Postgres.query<RoskaBids>(`
