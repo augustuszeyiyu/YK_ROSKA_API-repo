@@ -213,7 +213,6 @@ export = async function(fastify: FastifyInstance) {
             body: {
                 type: 'object',
                 properties:{
-                    sid:  {type: 'string'},
                     mids: {
                         type: 'array', 
                         items: { type: 'string' }
@@ -223,8 +222,8 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{sid:string, mids:RoskaMembers['mid'][]}}>('/group/member/transition', {schema}, async (req, res)=>{
-            const {sid, mids} = req.body;
+        fastify.post<{Body:{mids:RoskaMembers['mid'][]}}>('/group/member/transition', {schema}, async (req, res)=>{
+            const {mids} = req.body;
             
             // NOTE: query handling_fee, transition_fee, interest_bonus
             const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);           
@@ -233,19 +232,21 @@ export = async function(fastify: FastifyInstance) {
             const interest_bonus = Number(sysvar[2].value);
 
 
-            
-            const {rows:[serial_info]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid = $1;`, [sid]);
-
-
             const update_promise:string[] = [];
-            const {rows:members_info} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE mid = any($1);`, [mids]);
-            for (const {mid, gid} of members_info) {
-                          
-                const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, serial_info.cycles!, serial_info.basic_unit_amount!, 1000, gid, 1); 
+            const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials>(`
+                SELECT * 
+                FROM roska_members m
+                INNER JOIN roska_serials s ON m.sid = s.sid
+                mid = ANY($1)
+            `, [mids]);
+
+
+            for (const {mid, gid, sid, cycles, basic_unit_amount} of members_info) {                          
+                const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, basic_unit_amount, 1000, gid, 1); 
                 const sql = PGDelegate.format(`UPDATE roska_members SET transition = 1, win_amount = {win_amount} WHERE sid={sid} AND mid = {mid};`, {sid, mid, win_amount});
                 update_promise.push(sql);
             }
-            await Postgres.query(update_promise.join('\n'));  
+            await Postgres.query(update_promise.join('\n '));  
             
             return res.status(200).send({});
         });
