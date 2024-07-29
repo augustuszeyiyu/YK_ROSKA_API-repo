@@ -71,20 +71,28 @@ export = async function(fastify: FastifyInstance) {
                 
                 if (index === 0) {
                     // Add the member information to the list
-                    const payload:Partial<RoskaGroups> = {
+                    const payload_0:Partial<RoskaGroups> = {
                          gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
                          bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
                          bid_start_time: new Date(bid_start_time).toISOString(), 
                          win_time: new Date().toISOString() 
-                    }
-                    
+                    }                    
                     group_sql_list.push(PGDelegate.format(`
-                        INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
-                        VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')})
-                        ON CONFLICT DO NOTHING;`, payload)
+                        INSERT INTO roska_groups (${Object.keys(payload_0).join(', ')})
+                        VALUES (${Object.keys(payload_0).map(e => `{${e}}` ).join(', ')})
+                        ON CONFLICT DO NOTHING;`, payload_0)
                     )
-                    console.log(group_sql_list);
-                    
+
+
+                    ++index;
+                    // Add the member information to the list
+                    const payload_1:Partial<RoskaGroups> = { gid:`${sid}-t01`, sid, bid_start_time: new Date(bid_start_time).toISOString() }                 
+                    group_sql_list.push(PGDelegate.format(`
+                        INSERT INTO roska_groups (${Object.keys(payload_1).join(', ')})
+                        VALUES (${Object.keys(payload_1).map(e => `{${e}}` ).join(', ')})
+                        ON CONFLICT DO NOTHING;`, payload_1)
+                    );
+                    console.log(group_sql_list);                  
                 }
                 else {
                     // Add the member information to the list
@@ -924,10 +932,10 @@ export = async function(fastify: FastifyInstance) {
         if (isWeekend(newDate) === true) {
             if (newDate.getDay() === 0) { // If it's Sunday
                 // Subtract 2 days to schedule it on the previous Friday.
-                newDate.setDate(newDate.getDate() - 2);
+                newDate.setDate(newDate.getDate() - 5);
             } else if (newDate.getDay() === 6) { // If it's Saturday
                 // Subtract 1 day to schedule it on the previous Friday.
-                newDate.setDate(newDate.getDate() - 1);
+                newDate.setDate(newDate.getDate() - 4);
             }
         }
       
