@@ -58,18 +58,18 @@ export = async function(fastify: FastifyInstance) {
                 // NOTE: Generate gid
                 const gid = `${sid}-t`  + `${index}`.padStart(2, '0');
 
-                // NOET: Calculate Start Time
-                let bid_start_time:Date;
-                if (group_serial.frequency === 'monthly') {
-                    bid_start_time = calculateMonthlyBitStartTime(startTime, index);
-                } 
-                else {
-                    bid_start_time = calculateBiWeeklyBitStartTime(startTime, index)
-                }
-
-                console.log(bid_start_time);
-                
                 if (index === 0) {
+                    // NOET: Calculate Start Time
+                    let bid_start_time:Date;
+                    if (group_serial.frequency === 'monthly') {
+                        bid_start_time = calculateMonthlyBitStartTime(startTime, 0);
+                    } 
+                    else {
+                        bid_start_time = calculateBiWeeklyBitStartTime(startTime, 0)
+                    }
+                    console.log(bid_start_time);
+
+
                     // Add the member information to the list
                     const payload_0:Partial<RoskaGroups> = {
                          gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
@@ -82,19 +82,17 @@ export = async function(fastify: FastifyInstance) {
                         VALUES (${Object.keys(payload_0).map(e => `{${e}}` ).join(', ')})
                         ON CONFLICT DO NOTHING;`, payload_0)
                     )
-
-
-                    ++index;
-                    // Add the member information to the list
-                    const payload_1:Partial<RoskaGroups> = { gid:`${sid}-t01`, sid, bid_start_time: new Date(bid_start_time).toISOString() }                 
-                    group_sql_list.push(PGDelegate.format(`
-                        INSERT INTO roska_groups (${Object.keys(payload_1).join(', ')})
-                        VALUES (${Object.keys(payload_1).map(e => `{${e}}` ).join(', ')})
-                        ON CONFLICT DO NOTHING;`, payload_1)
-                    );
-                    console.log(group_sql_list);                  
                 }
                 else {
+                    // NOET: Calculate Start Time
+                    let bid_start_time:Date;
+                    if (group_serial.frequency === 'monthly') {
+                        bid_start_time = calculateMonthlyBitStartTime(startTime, index-1);
+                    } 
+                    else {
+                        bid_start_time = calculateBiWeeklyBitStartTime(startTime, index-1)
+                    }
+
                     // Add the member information to the list
                     const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toISOString() }
                     group_sql_list.push(PGDelegate.format(`

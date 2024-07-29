@@ -237,7 +237,7 @@ export = async function(fastify: FastifyInstance) {
                 SELECT * 
                 FROM roska_members m
                 INNER JOIN roska_serials s ON m.sid = s.sid
-                mid = ANY($1)
+                WHERE m.mid = ANY($1);
             `, [mids]);
 
 
