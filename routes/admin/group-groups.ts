@@ -34,7 +34,7 @@ export = async function(fastify: FastifyInstance) {
 		fastify.post<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
             if ( !PayloadValidator1(req.params) ) {
                 return res.status(400).send({
-                    scope:req.routerPath,
+                    scope:req.routeOptions.url,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -151,7 +151,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/group/all-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
-                    scope:req.routerPath,
+                    scope:req.routeOptions.url,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)

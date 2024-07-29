@@ -34,7 +34,7 @@ export = async function(fastify:FastifyInstance) {
 		fastify.get<{Querystring:{filter_text?:string, order?:string, p?:string, ps?:string}, Reply:APIResponse<PaginateCursorUser>}>('/user/list', {schema}, async (req, res) => {
 			if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
-                    scope:req.routerPath,
+                    scope:req.routeOptions.url,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -183,7 +183,7 @@ export = async function(fastify:FastifyInstance) {
 		fastify.get<{Params:{uid:string}, Reply:APIResponse<ResponseUser>}>('/user/:uid', {schema}, async(req, res)=>{
 			if ( !PayloadValidator(req.params) ) {
                 return res.status(400).send({
-                    scope:req.routerPath,
+                    scope:req.routeOptions.url,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -194,7 +194,7 @@ export = async function(fastify:FastifyInstance) {
 			// NOTE: user admin-level = 2			
 			// if (req.session.admin_level! <= 1) {
             //     return res.status(400).send({
-            //         scope:req.routerPath,
+            //         scope:req.routeOptions.url,
             //         code:ErrorCode.UNAUTHORIZED,
             //         msg: "You're not authorized to access this resource!"
             //     });
@@ -204,7 +204,7 @@ export = async function(fastify:FastifyInstance) {
 			const {uid} = req.params;
 			if (!uid || uid.trim() === '') {
 				return res.status(400).send({
-                    scope:req.routerPath,
+                    scope:req.routeOptions.url,
                     code:ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "uid cannot be empty"
                 });
@@ -259,7 +259,7 @@ export = async function(fastify:FastifyInstance) {
 		fastify.post<{Params:{uid:User['uid']}, Body:PayloadBody, Reply:object}>('/user/:uid', {schema}, async(req, res)=>{
             if ( !PayloadValidator1(req.params) ) {
                 return res.status(400).send({
-                    scope:req.routerPath,
+                    scope:req.routeOptions.url,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -268,7 +268,7 @@ export = async function(fastify:FastifyInstance) {
 			
 			if ( !PayloadValidator2(req.body) ) {
                 return res.status(400).send({
-                    scope:req.routerPath,
+                    scope:req.routeOptions.url,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator2.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -279,7 +279,7 @@ export = async function(fastify:FastifyInstance) {
 			// NOTE: user admin-level > 3
 			// if (req.session.admin_level! <= 3) {
             //     return res.status(400).send({
-            //         scope:req.routerPath,
+            //         scope:req.routeOptions.url,
             //         code:ErrorCode.UNAUTHORIZED,
             //         msg: "You're not authorized to access this resource!"
             //     });

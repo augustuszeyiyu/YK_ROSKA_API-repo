@@ -10,8 +10,8 @@ export = async function(fastify:FastifyInstance) {
 		const {is_login, token} = req.session;
 		if ( is_login === false || token === undefined || token.role < 3 ) {
 			return res.status(401).send({
-				scope:req.routerPath,
-				code:ErrorCode.UNAUTHORIZED,
+				scope: req.routeOptions.url,
+				code: ErrorCode.UNAUTHORIZED,
 				msg: "You're not authorized to access this resource!"
 			});
 		}
