@@ -282,6 +282,137 @@ export = async function(fastify: FastifyInstance) {
             res.status(200).send({url:`${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`});
         });
     }
+    /** GET　/api/file/member-pay-record **/
+    {
+        const schema = {
+			description: '會員開標付款紀錄表',
+			summary: '會員開標付款紀錄表',
+            params: {
+                type: 'object',
+                properties: {},
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+		fastify.get<{Params:{uid:RoskaMembers['uid']}}>('/file/member-pay-record', {schema}, async (req, res) => {
+            const {uid} = req.session.token!;
+
+            const {rows:[user_name]} = await Postgres.query<{name:User['name']}>(`SELECT name FROM users WHERE uid = $1`, [uid]);
+
+            const {rows:user_transition_info} = await Postgres.query<{
+                sid:RoskaMembers['sid'], 
+                mid:RoskaMembers['mid'],
+                basic_unit_amount: RoskaSerials['basic_unit_amount'],
+                cycles:RoskaSerials['cycles'],
+                transition:RoskaMembers['transition'], 
+                transit_to:RoskaMembers['transit_to'],
+                total: number,
+                group_info: (Partial<RoskaGroups>&{date:string})[],
+            }>(`
+                SELECT DISTINCT 
+                m.sid, 
+                m.mid,
+                s.basic_unit_amount,
+                s.cycles,
+                s.bid_start_time,
+                m.transition,
+                m.transit_to,
+                COALESCE(
+                    (
+                        SELECT
+                            jsonb_agg( jsonb_build_object(
+                                'gid', rg.gid, 
+                                'bid_start_time', rg.bid_start_time,
+                                'date', extract(year from rg.bid_start_time)-1911||'-'||extract(month from rg.bid_start_time),
+                                'win_amount', (CASE 
+                                    WHEN rg.gid = m.gid THEN rg.win_amount
+                                    WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+                                    WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+                                    ELSE -s.basic_unit_amount END)
+                            ) ORDER BY rg.gid, rg.sid)
+                        FROM 
+                            roska_groups rg
+                        WHERE 
+                            rg.sid = m.sid AND 
+                            rg.mid <> ''
+                    ), '[]'::jsonb) AS group_info
+                FROM 
+                    roska_members m
+                INNER JOIN 
+                    roska_serials s ON m.sid=s.sid
+                WHERE 
+                    m.mid IN (SELECT mid FROM roska_members WHERE uid = $1)
+                ORDER BY 
+                    m.sid;`, [uid]);
+
+
+            
+            // Initialize Excel workbook and worksheet
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet(`會員開標付款紀錄表-${user_name.name}`);
+        
+            // Define columns
+            const columns = [
+                { header: '會員編號', key: 'mid', width: 20 },
+                { header: '姓名', key: 'name', width: 20 },
+                { header: '起會日', key: 'bid_start_time', width: 10 },
+            ];
+
+            const data_list: any[] = [];
+            for (const elm of user_transition_info) {
+                const data = {
+                    mid: elm.mid,
+                    name: user_name.name,
+                    bid_start_time: elm.group_info[0]?.date // Ensure group_info[0] exists
+                };
+
+                for (const glm of elm.group_info) {
+                    const find = columns.find(elm => elm.key === `_${glm.date}`);
+                    if (!find) {
+                        columns.push({ header: `${glm.date}`, key: `_${glm.date}`, width: 10 });
+                    }
+                    data[`_${glm.date}`] = glm.win_amount;
+                }
+                
+                console.log(data, columns);
+                data_list.push(data);                
+            }
+
+            worksheet.columns = columns;
+            worksheet.addRows(data_list);
+
+            // Check if file exists or not
+            const uploadDir = Config.storage_root;
+            const newFilename = `user-payment-report-${uid}.xlsx`;
+            const newFilePath = path.resolve(uploadDir, newFilename);
+
+            // Delete existing file if it exists
+            await Postgres.query(`DELETE FROM files WHERE file_path = $1`, [newFilePath]);
+
+            // Save the workbook to a file
+            await workbook.xlsx.writeFile(newFilePath);
+            console.log('Excel file created successfully.');
+
+            // Insert file record into database
+            const insert_data = {
+                fid: TrimId.NEW.toString(32),
+                uid,
+                file_path: newFilePath,
+                file_name: newFilename,
+                encoding: 'OpenXML format',
+                mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            };
+
+            const sql = PGDelegate.format(`
+                INSERT INTO files (fid, uid, file_path, file_name, encoding, mimetype)
+                VALUES ({fid}, {uid}, {file_path}, {file_name}, {encoding}, {mimetype})
+            `, insert_data);
+
+            await Postgres.query(sql);
+
+            res.status(200).send({ url: `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}` });
+        });
+    }
     /** GET /api/file/latest-bid-opening-record **/
     {
         const schema = {
