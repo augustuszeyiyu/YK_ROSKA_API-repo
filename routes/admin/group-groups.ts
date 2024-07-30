@@ -145,8 +145,8 @@ export = async function(fastify: FastifyInstance) {
                     const payload_0:Partial<RoskaGroups> = {
                          gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
                          bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
-                         bid_start_time: new Date().toISOString(), 
-                         win_time: new Date().toISOString() 
+                         bid_start_time: new Date().toLocaleString(), 
+                         win_time: new Date().toLocaleString() 
                     }                    
                     group_sql_list.push(PGDelegate.format(`
                         INSERT INTO roska_groups (${Object.keys(payload_0).join(', ')})
@@ -169,8 +169,8 @@ export = async function(fastify: FastifyInstance) {
                         const payload_0:Partial<RoskaGroups> = {
                             gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
                             bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
-                            bid_start_time: new Date(first_bid_start_time.getFullYear(), first_bid_start_time.getMonth(), 10).toISOString(), 
-                            win_time: new Date().toISOString() 
+                            bid_start_time: new Date(first_bid_start_time.getFullYear(), first_bid_start_time.getMonth(), 10).toLocaleString(), 
+                            win_time: new Date().toLocaleString() 
                         }                    
                         group_sql_list = [PGDelegate.format(`
                            INSERT INTO roska_groups (${Object.keys(payload_0).join(', ')})
@@ -180,7 +180,7 @@ export = async function(fastify: FastifyInstance) {
                     }
 
                     // Add the member information to the list
-                    const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toISOString() }
+                    const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toLocaleString() }
                     group_sql_list.push(PGDelegate.format(`
                         INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
                         VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')})
@@ -198,7 +198,7 @@ export = async function(fastify: FastifyInstance) {
                     }
 
                     // Add the member information to the list
-                    const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toISOString() }
+                    const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toLocaleString() }
                     group_sql_list.push(PGDelegate.format(`
                         INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
                         VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')})
