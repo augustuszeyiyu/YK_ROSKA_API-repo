@@ -276,7 +276,7 @@ export = async function(fastify: FastifyInstance) {
             `, [mids]);
 
 
-            for (const {mid, gid, sid, cycles, basic_unit_amount, header} of members_info) {                          
+            for (const {mid, gid, sid, cycles, basic_unit_amount, header} of members_info) {
                 const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, basic_unit_amount, 1000, gid, transition); 
                 const sql_1 = PGDelegate.format(`
                     UPDATE roska_members 
