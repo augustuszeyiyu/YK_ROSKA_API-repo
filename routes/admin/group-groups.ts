@@ -160,7 +160,7 @@ export = async function(fastify: FastifyInstance) {
                     const payload_0:Partial<RoskaGroups> = {
                          gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
                          bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
-                         bid_start_time: new Date(bid_start_time).toISOString(), 
+                         bid_start_time: new Date().toISOString(), 
                          win_time: new Date().toISOString() 
                     }                    
                     group_sql_list.push(PGDelegate.format(`
