@@ -13,6 +13,35 @@ import { cal_win_amount } from "/lib/cal-win-amount";
 type PaginateCursorUser = PaginateCursor<RoskaSerials[]>;
 
 export = async function(fastify: FastifyInstance) {
+    /* 搜尋該團下的成員 */
+    {
+        const schema = {
+			description: '搜尋該團下的成員',
+			summary: '搜尋該團下的成員',
+            params: {
+                description: '搜尋該團下的成員',
+                type: 'object',
+				properties: {
+                    sid: { type: 'string' }
+                },
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/group/member/:sid', {schema}, async (req, res)=>{
+            const {uid}:{uid:User['uid']} = req.session.token!;
+            const {sid} = req.params;
+
+            const {rows} = await Postgres.query(
+                `SELECT u.uid, u.name, m.*, 
+                FROM roska_members m 
+                INNER JOIN users u ON m.uid=u.uid
+                WHERE m.sid=$1
+                ORDER BY m.mid ASC;`,[sid]);
+
+            return res.status(200).send(rows);
+        });
+    } 
     /* 新增會員入會 */
     {
         const schema = {
@@ -243,8 +272,11 @@ export = async function(fastify: FastifyInstance) {
 
             for (const {mid, gid, sid, cycles, basic_unit_amount} of members_info) {                          
                 const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, basic_unit_amount, 1000, gid, 1); 
-                const sql = PGDelegate.format(`UPDATE roska_members SET transition = 1, win_amount = {win_amount} WHERE sid={sid} AND mid = {mid};`, {sid, mid, win_amount});
-                update_promise.push(sql);
+                const sql_1 = PGDelegate.format(`UPDATE roska_members SET transition = 1, win_amount = {win_amount} WHERE sid={sid} AND mid = {mid};`, {sid, mid, win_amount});
+                update_promise.push(sql_1);
+
+                const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {gid, win_amount});
+                update_promise.push(sql_2);
             }
             await Postgres.query(update_promise.join('\n '));  
             
