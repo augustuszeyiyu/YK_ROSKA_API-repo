@@ -264,7 +264,8 @@ export = async function(fastify: FastifyInstance) {
             }),
             security: [{ bearerAuth: [] }],
 		};
-
+        console.log(schema);
+        
         const PayloadValidator = $.ajv.compile(schema_query);
         fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/on-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
@@ -339,14 +340,18 @@ export = async function(fastify: FastifyInstance) {
 
             {
                 val.push(_PageSize);
-                sql += ` FETCH NEXT $${val.length} ROWS ONLY;`;
+                sql += ` FETCH NEXT $${val.length} ROWS ONLY`;
             }
 
 
-            console.log(sql, val);
+            const final_query = `
+                WITH on_list_quyer AS (${sql})
+                SELECT * FROM on_list_quyer WHERE next_gid IS NOT NULL
+            `;
+            console.log(sql, val, final_query);
             
                     
-            const {rows:records} = await Postgres.query(sql, val);
+            const {rows:records} = await Postgres.query(final_query, val);
             result.records = records;
             result.meta.total_records = total_records;
             result.meta.total_pages = Math.ceil(total_records / _PageSize);
@@ -398,12 +403,19 @@ export = async function(fastify: FastifyInstance) {
 
             
             let sql_count = `
-                SELECT COUNT(*) FROM roska_serials 
-                WHERE NOW() > bid_end_time;`;
+                SELECT COUNT(*)
+                FROM roska_groups g
+                INNER JOIN roska_serials s ON s.sid = g.sid
+                WHERE NOW() > g.bid_end_time
+                GROUP BY s.sid, s.member_count
+                ORDER BY s.sid ${_order} `;
             let sql = `
-                SELECT * FROM roska_serials 
-                WHERE NOW() > bid_end_time
-                ORDER BY sid ${_order} `;
+                SELECT s.*, (CASE WHEN COUNT(g.sid) = s.member_count THEN true ELSE false END) as expired
+                FROM roska_groups g
+                INNER JOIN roska_serials s ON s.sid = g.sid
+                WHERE NOW() > g.bid_end_time
+                GROUP BY s.sid, s.member_count
+                ORDER BY s.sid ${_order} `;
             const val:any[] = [];
   
   
@@ -438,14 +450,17 @@ export = async function(fastify: FastifyInstance) {
 
             {
                 val.push(_PageSize);
-                sql += ` FETCH NEXT $${val.length} ROWS ONLY;`;
+                sql += ` FETCH NEXT $${val.length} ROWS ONLY`;
             }
 
 
-            console.log(sql, val);
+            const final_query = `
+                WITH on_list_quyer AS (${sql})
+                SELECT * FROM on_list_quyer WHERE expired IS TRUE`;
+            console.log(sql, val, final_query);
             
                     
-            const {rows:records} = await Postgres.query(sql, val);
+            const {rows:records} = await Postgres.query(final_query, val);
             result.records = records;
             result.meta.total_records = total_records;
             result.meta.total_pages = Math.ceil(total_records / _PageSize);
