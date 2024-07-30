@@ -93,11 +93,11 @@ import { PGDelegate } from "pgdelegate";
     
                             if (win_amount !== undefined && win_amount > 0) {                        
                                 const sql = PGDelegate.format(`
-                                    INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
-                                    VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid})
+                                    INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to)
+                                    VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to})
                                     ON CONFLICT (mid, uid, sid) 
                                     DO UPDATE
-                                    SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid};
+                                    SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to};
                                 `,{
                                     mid: `${sid}-${elm.m.trim()}`,
                                     uid: user.uid,
@@ -107,7 +107,6 @@ import { PGDelegate } from "pgdelegate";
                                     win_time: elm.bid_date !== ''? format_date: null,
                                     transition: elm.transition !== ''? elm.transition: '0',
                                     transit_to: elm.transition === '1'? users[0].uid: '',
-                                    transit_gid: elm.transition === '1'? `${sid}-t00`: '', 
                                 });
                                 console.log(sql);
                                 insert_list.push(sql);
@@ -133,11 +132,11 @@ import { PGDelegate } from "pgdelegate";
                             }
                             else {
                                 const sql = PGDelegate.format(`
-                                    INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
-                                    VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid})
+                                    INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to)
+                                    VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to})
                                     ON CONFLICT (mid, uid, sid) 
                                     DO UPDATE
-                                    SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid};
+                                    SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}};
                                 `,{
                                     mid: `${sid}-${elm.m.trim()}`,
                                     uid: user.uid,
@@ -147,7 +146,6 @@ import { PGDelegate } from "pgdelegate";
                                     win_time: null,
                                     transition: '0',
                                     transit_to: '',
-                                    transit_gid: '', 
                                 });
                                 console.log(sql);
                                 insert_list.push(sql);
@@ -173,11 +171,11 @@ import { PGDelegate } from "pgdelegate";
                             
         
                             const sql = PGDelegate.format(`
-                                INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to, transit_gid)
-                                VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to}, {transit_gid})
+                                INSERT INTO roska_members (mid, uid, sid, gid, win_amount, win_time, transition, transit_to)
+                                VALUES ({mid}, {uid}, {sid}, {gid}, {win_amount}, {win_time}, {transition}, {transit_to})
                                 ON CONFLICT (mid, uid, sid) 
                                 DO UPDATE
-                                SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to}, transit_gid={transit_gid};
+                                SET uid={uid}, gid={gid}, win_time={win_time}, win_amount={win_amount}, transition={transition}, transit_to={transit_to});
                             `,{
                                 mid: `${sid}-${elm.m.trim()}`,
                                 uid: user.uid,
@@ -187,7 +185,6 @@ import { PGDelegate } from "pgdelegate";
                                 win_time: elm.bid_date !== '' && elm.t !== ''? format_date: null,
                                 transition: elm.transition !== ''? elm.transition: '0',
                                 transit_to: elm.transition === '1'? users[0].uid: '',
-                                transit_gid: elm.transition === '1'? `${sid}-t00`: '', 
                             });
                             console.log(sql);                            
                             insert_list.push(sql);

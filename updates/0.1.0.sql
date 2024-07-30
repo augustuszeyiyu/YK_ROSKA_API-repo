@@ -287,7 +287,6 @@ CREATE TABLE IF NOT EXISTS roska_members (
     win_time                    TIMESTAMPTZ,
     transition                  SMALLINT            NOT NULL DEFAULT 0,
     transit_to                  VARCHAR(32)         NOT NULL DEFAULT '',
-    transit_gid                 VARCHAR(17)         NOT NULL DEFAULT '',
     installment_deadline        TIMESTAMPTZ,
 	update_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     create_time					TIMESTAMPTZ         NOT NULL DEFAULT NOW(),

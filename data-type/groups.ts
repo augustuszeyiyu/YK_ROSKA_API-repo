@@ -55,7 +55,6 @@ export interface RoskaMembers {
     win_time: string,
     transition: number,
     transit_to: User['uid'],
-    transit_gid: RoskaGroups['gid'],
     update_time: string,
     create_time: string,
 }

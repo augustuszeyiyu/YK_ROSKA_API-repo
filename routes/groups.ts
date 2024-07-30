@@ -31,7 +31,6 @@ export = async function(fastify: FastifyInstance) {
                 cycles:RoskaSerials['cycles'],
                 transition:RoskaMembers['transition'], 
                 transit_to:RoskaMembers['transit_to'],
-                transit_gid:RoskaMembers['transit_gid'],
                 total: number,
                 group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
             }>(`
@@ -43,7 +42,6 @@ export = async function(fastify: FastifyInstance) {
                 s.bid_start_time,
                 m.transition,
                 m.transit_to,
-                m.transit_gid,
                 COALESCE(
                     (
                         SELECT
@@ -105,7 +103,6 @@ export = async function(fastify: FastifyInstance) {
                 cycles:RoskaSerials['cycles'],
                 transition:RoskaMembers['transition'], 
                 transit_to:RoskaMembers['transit_to'],
-                transit_gid:RoskaMembers['transit_gid'],
                 total: number,
                 group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
             }>(`
@@ -116,7 +113,6 @@ export = async function(fastify: FastifyInstance) {
                     s.cycles,
                     m.transition,
                     m.transit_to,
-                    m.transit_gid,
                     COALESCE(
                         (
                             SELECT

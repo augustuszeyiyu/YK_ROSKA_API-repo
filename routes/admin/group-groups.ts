@@ -55,7 +55,6 @@ export = async function(fastify: FastifyInstance) {
             current_cycles:number,
             transition:RoskaMembers['transition'], 
             transit_to:RoskaMembers['transit_to'],
-            transit_gid:RoskaMembers['transit_gid'],
             total: number,
             group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
         }>(`
@@ -66,7 +65,6 @@ export = async function(fastify: FastifyInstance) {
                 s.cycles,
                 m.transition,
                 m.transit_to,
-                m.transit_gid,
                 COALESCE(
                     (
                         SELECT

@@ -5,6 +5,8 @@ import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { BaseError, LoginError, UserError } from '/lib/error';
 import { GroupError } from "/lib/error/gruop-error";
+import { SysVar } from "/data-type/sysvar";
+import { cal_win_amount } from "/lib/cal-win-amount";
 
 
 export = async function(fastify: FastifyInstance) {
@@ -221,49 +223,65 @@ export = async function(fastify: FastifyInstance) {
         });
     } 
     /** 會員轉讓 **/
-    {
-        const schema = {
-			description: '會員轉讓 mid',
-			summary: '會員轉讓 mid',
-            params: {
-                type: 'object',
-                properties:{
-                    sid: {type: 'string'}
-                },
-                required:["sid"],
-            },
-            security: [{ bearerAuth: [] }],
-		};
+    // {
+    //     const schema = {
+	// 		description: '會員轉讓 mid',
+	// 		summary: '會員轉讓 mid',
+    //         params: {
+    //             type: 'object',
+    //             properties:{
+    //                 mid: {type: 'string'}
+    //             },
+    //             required:["mid"],
+    //         },
+    //         security: [{ bearerAuth: [] }],
+	// 	};
 
-        fastify.post<{Params:{sid:RoskaMembers['sid']}}>('/group/member/transition/:sid', {schema}, async (req, res)=>{
-            const {uid}:{uid:User['uid']} = req.session.token!;
-
-            const {sid} = req.params;
-            
-            const {rows:[serial_haed_uid]} = await Postgres.query<RoskaMembers>(`
-                SELECT uid 
-                FROM roska_members 
-                WHERE sid=$1 
-                ORDER BY mid 
-                LIMIT 1;`, [sid]);
+    //     fastify.post<{Params:{mid:RoskaMembers['mid']}}>('/group/member/transition/:mid', {schema}, async (req, res)=>{
+    //         const {uid}:{uid:User['uid']} = req.session.token!;
+    //         const {mid} = req.params;
 
 
-            const {rows:[next_gid]} = await Postgres.query<{gid:RoskaGroups['gid']}>(`
-                SELECT gid
-                FROM roska_groups
-                WHERE sid = $1 AND mid = ''
-                ORDER BY gid ASC LIMIT 1`,[sid]);
-
-                
-
-            await Postgres.query<RoskaMembers>(`
-                UPDATE roska_members 
-                SET transition = 1, transit_to = $3, transit_gid = $4 
-                WHERE sid=$1 AND uid=$2;`, [sid, uid, serial_haed_uid, next_gid]);
+    //         // NOTE: query handling_fee, transition_fee, interest_bonus
+    //         const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);           
+    //         const handling_fee = Number(sysvar[0].value);
+    //         const transition_fee = Number(sysvar[1].value);
+    //         const interest_bonus = Number(sysvar[2].value);
 
 
             
-            return res.status(200).send({});
-        });
-    }
+    //         const {rows:[members_info]} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
+    //             SELECT *, s.uid as header
+    //             FROM roska_members m
+    //             INNER JOIN roska_serials s ON m.sid = s.sid
+    //             WHERE m.mid = $1;
+    //         `, [mid]);
+
+
+    //         if (members_info.gid === '') {
+    //             await Postgres.query<RoskaMembers>(`
+    //                 UPDATE roska_members 
+    //                 SET transition = 1, transit_to = $2
+    //                 WHERE mid=$1;`, [mid, members_info.header]);
+    //         }
+    //         else {
+    //             const update_promise:string[] = [];
+    //             const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, members_info.cycles, members_info.basic_unit_amount, 1000, members_info.gid, 1); 
+
+    //             const sql_1 = PGDelegate.format(`
+    //                 UPDATE roska_members 
+    //                 SET transition = {transition}, win_amount = {win_amount}, transit_to = {transit_to}
+    //                 WHERE sid={sid} AND mid = {mid};`, {sid: members_info.sid, mid, win_amount, transition:1, transit_to: members_info.header});
+    //             update_promise.push(sql_1);
+
+    //             const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {gid: members_info.gid, win_amount});
+    //             update_promise.push(sql_2);
+
+    //             await Postgres.query(update_promise.join('\n '));  
+    //         }
+
+            
+    //         return res.status(200).send({});
+    //     });
+    // }
 };
