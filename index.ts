@@ -155,10 +155,10 @@ Promise.chain(async()=>{
 		.addHook('preHandler', async(req, res) => {
 			req.session = { source:'unkown', is_login:false };
 			
-			console.log(req.routeOptions.url, req.headers['authorization']);
+			console.log(req.routerPath, req.headers['authorization']);
 			const whiteList = ['/api/register', '/api/auth/login', '/api/version', '/api/auth/password/forgot', '/api/auth/password/forgot/reset'];
-			if (whiteList.includes(req.routeOptions.url) === true)  return;
-
+			if (whiteList.includes(req.routerPath) === true)  return;
+			
 
 			let auth_source:LoginSession['source'], raw_token:string;
 			const auth = (req.headers['authorization']||'').trim();
@@ -229,7 +229,7 @@ Promise.chain(async()=>{
 		// 		const error_details:string[] = error.validation.map(e=>`${e.dataPath||'payload'} ${e.message!}`);
 		// 		res.status(400).send({
 		// 			code: is_body_error ? ErrorCode.INVALID_REQUEST_PAYLOAD : ErrorCode.INVALID_REQUEST_QUERY,
-		// 			scope: req.routeOptions.url,
+		// 			scope: req.routerPath,
 		// 			msg: is_body_error ? "Request payload is invalid" : "Request query is invalid",
 		// 			detail: error_details
 		// 		});
@@ -238,7 +238,7 @@ Promise.chain(async()=>{
 
 		// 	res.status(500).send({
 		// 		code: ErrorCode.UNKOWN_ERROR,
-		// 		scope: req.routeOptions.url,
+		// 		scope: req.routerPath,
 		// 		msg: "Unexpected error has been occurred!",
 		// 		detail: [{code:error.code, message:error.message}]
 		// 	});
@@ -252,7 +252,7 @@ Promise.chain(async()=>{
 		// 	case "FST_ERR_CTP_EMPTY_TYPE":
 		// 		res.status(400).send({
 		// 			code: ErrorCode.INVALID_REQUEST_MIME,
-		// 			scope: req.routeOptions.url,
+		// 			scope: req.routerPath,
 		// 			msg: "Payload type must be provided"
 		// 		});
 		// 		break;
@@ -260,7 +260,7 @@ Promise.chain(async()=>{
 		// 	case "FST_ERR_CTP_INVALID_TYPE":
 		// 		res.status(400).send({
 		// 			code: ErrorCode.INVALID_REQUEST_MIME,
-		// 			scope: req.routeOptions.url,
+		// 			scope: req.routerPath,
 		// 			msg: "Payload type is not supported"
 		// 		});
 		// 		break;
@@ -268,7 +268,7 @@ Promise.chain(async()=>{
 		// 	case "FST_ERR_CTP_EMPTY_JSON_BODY":
 		// 		res.status(400).send({
 		// 			code: ErrorCode.INVALID_REQUEST_PAYLOAD,
-		// 			scope: req.routeOptions.url,
+		// 			scope: req.routerPath,
 		// 			msg: "Request payload cannot be parsed as json"
 		// 		});
 		// 		break;
@@ -278,7 +278,7 @@ Promise.chain(async()=>{
 		// 		console.log(error);
 		// 		res.status(500).send({
 		// 			code: ErrorCode.UNKOWN_ERROR,
-		// 			scope: req.routeOptions.url,
+		// 			scope: req.routerPath,
 		// 			msg: "Unexpected error has been occurred",
 		// 			detail: error.code
 		// 		});

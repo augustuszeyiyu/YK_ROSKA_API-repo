@@ -37,8 +37,10 @@ export = async function(fastify: FastifyInstance) {
             }>(`
                 SELECT DISTINCT 
                 m.sid, 
+                m.mid,
                 s.basic_unit_amount,
                 s.cycles,
+                s.bid_start_time,
                 m.transition,
                 m.transit_to,
                 m.transit_gid,
@@ -109,6 +111,7 @@ export = async function(fastify: FastifyInstance) {
             }>(`
                 SELECT DISTINCT 
                     m.sid, 
+                    m.mid,
                     s.basic_unit_amount,
                     s.cycles,
                     m.transition,

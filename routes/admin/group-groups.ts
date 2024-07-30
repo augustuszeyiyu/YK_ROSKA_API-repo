@@ -15,6 +15,94 @@ import { cal_win_amount } from "/lib/cal-win-amount";
 
 
 export = async function(fastify: FastifyInstance) {
+/** admin各會期結算 **/
+{
+    const schema_params = {
+        type: 'object',
+        properties: {
+            uid: { type: "string" },
+            year: { type: 'number' },
+            month: { type: 'number' }
+        },
+
+    };
+    const schema = {
+        description: 'admin各會期結算',
+        summary: 'admin各會期結算',
+        params: schema_params,
+        security: [{ bearerAuth: [] }],
+    };
+    const PayloadValidator1 = $.ajv.compile(schema_params);
+    fastify.get<{Params:{uid:string, year:number, month:number}}>('/group/group/serial/settlement/:uid/ :year/ :month', {schema}, async (req, res)=>{
+        if ( !PayloadValidator1(req.params) ) {
+            return res.status(400).send({
+                scope:req.routerPath,
+                code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                msg: "Request payload is invalid!",
+                detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+            });
+        }
+        const {uid, year, month} = req.params!;
+        console.log(req.params);
+        console.log({uid, year, month});
+
+
+        const {rows:user_transition_info} = await Postgres.query<{
+            sid:RoskaMembers['sid'], 
+            mid:RoskaMembers['mid'], 
+            basic_unit_amount: RoskaSerials['basic_unit_amount'],
+            cycles:RoskaSerials['cycles'],
+            current_cycles:number,
+            transition:RoskaMembers['transition'], 
+            transit_to:RoskaMembers['transit_to'],
+            transit_gid:RoskaMembers['transit_gid'],
+            total: number,
+            group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
+        }>(`
+            SELECT DISTINCT 
+                m.sid, 
+                m.mid,
+                s.basic_unit_amount,
+                s.cycles,
+                m.transition,
+                m.transit_to,
+                m.transit_gid,
+                COALESCE(
+                    (
+                        SELECT
+                            jsonb_agg( jsonb_build_object(
+                                'gid', rg.gid, 
+                                'bid_amount', rg.bid_amount,
+                                'win_amount', (CASE 
+                                    WHEN rg.gid = m.gid THEN rg.win_amount 
+                                    WHEN rg.gid < m.gid THEN s.basic_unit_amount - rg.bid_amount
+                                    ELSE s.basic_unit_amount END)
+                            ) ORDER BY rg.gid, rg.sid)
+                        FROM 
+                            roska_groups rg
+                        WHERE 
+                            rg.sid = m.sid AND 
+                            rg.mid <> '' AND 
+                            EXTRACT(YEAR FROM win_time) <= $2 AND
+                            EXTRACT(MONTH FROM win_time) <= $3
+                    ), '[]'::jsonb) AS group_info
+            FROM 
+                roska_members m
+            INNER JOIN 
+                roska_serials s ON m.sid=s.sid
+            WHERE 
+                m.uid = $1
+            ORDER BY 
+                m.sid;`, [uid, year, month]);
+
+
+        return res.status(200).send(user_transition_info);
+    });
+}
+
+
+
+
      /** 產會期編號 **/
 	{
         const schema_params = {
@@ -34,7 +122,7 @@ export = async function(fastify: FastifyInstance) {
 		fastify.post<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
             if ( !PayloadValidator1(req.params) ) {
                 return res.status(400).send({
-                    scope:req.routeOptions.url,
+                    scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -149,7 +237,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/group/all-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
-                    scope:req.routeOptions.url,
+                    scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)

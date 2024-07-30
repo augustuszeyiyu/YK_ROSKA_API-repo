@@ -57,7 +57,7 @@ export = async function(fastify: FastifyInstance) {
             
             if ( !PayloadValidator(req.body) ) {
                 return res.status(400).send({
-                    scope:req.routeOptions.url,
+                    scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -170,7 +170,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/new-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
-                    scope:req.routeOptions.url,
+                    scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -269,7 +269,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/on-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
-                    scope:req.routeOptions.url,
+                    scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -383,7 +383,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/past-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
-                    scope:req.routeOptions.url,
+                    scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
@@ -487,7 +487,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/all-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
-                    scope:req.routeOptions.url,
+                    scope:req.routerPath,
                     code: ErrorCode.INVALID_REQUEST_PAYLOAD,
                     msg: "Request payload is invalid!",
                     detail: PayloadValidator.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
