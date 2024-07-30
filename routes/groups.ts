@@ -25,8 +25,6 @@ export = async function(fastify: FastifyInstance) {
 
             const {uid} = req.session.token!;
 
-            const {rows: [array_mids]} = await Postgres.query<{array_agg:RoskaMembers['mid'][]}>(`SELECT array_agg(mid) FROM roska_members WHERE uid = $1`, [uid]);
-            const mids = array_mids.array_agg;
             
             const {rows:user_transition_info} = await Postgres.query<{
                 sid:RoskaMembers['sid'], 
@@ -66,9 +64,9 @@ export = async function(fastify: FastifyInstance) {
                 INNER JOIN 
                     roska_serials s ON m.sid=s.sid
                 WHERE 
-                    m.mid = ANY($1)
+                    m.mid = IN (SELECT mid FROM roska_members WHERE uid = $1)
                 ORDER BY 
-                m.sid;`, [mids]);
+                m.sid;`, [uid]);
 
 
             return res.status(200).send(user_transition_info);
