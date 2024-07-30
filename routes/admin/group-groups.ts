@@ -1028,20 +1028,9 @@ export = async function(fastify: FastifyInstance) {
         
 
         const newYear = bid_start_time.getFullYear() + yearOffset;
-        let newDate = new Date(newYear, monthInYear, 10);
-
+        let newDate = new Date(newYear, monthInYear, 3);
         console.log({newYear, newDate});
 
-        // Check if the calculated date is a weekend
-        if (isWeekend(newDate) === true) {
-            if (newDate.getDay() === 0) { // If it's Sunday
-                // Subtract 2 days to schedule it on the previous Friday.
-                newDate.setDate(newDate.getDate() - 5);
-            } else if (newDate.getDay() === 6) { // If it's Saturday
-                // Subtract 1 day to schedule it on the previous Friday.
-                newDate.setDate(newDate.getDate() - 4);
-            }
-        }
       
         return newDate; // Return the adjusted bid_start_time
     }
