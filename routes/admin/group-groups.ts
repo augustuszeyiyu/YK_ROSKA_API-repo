@@ -15,92 +15,88 @@ import { cal_win_amount } from "/lib/cal-win-amount";
 
 
 export = async function(fastify: FastifyInstance) {
-/** admin各會期結算 **/
-{
-    const schema_params = {
-        type: 'object',
-        properties: {
-            uid: { type: "string" },
-            year: { type: 'number' },
-            month: { type: 'number' }
-        },
+    /** admin各會期結算 **/
+    {
+        const schema_params = {
+            type: 'object',
+            properties: {
+                uid: { type: "string" },
+                year: { type: 'number' },
+                month: { type: 'number' }
+            },
 
-    };
-    const schema = {
-        description: 'admin各會期結算',
-        summary: 'admin各會期結算',
-        params: schema_params,
-        security: [{ bearerAuth: [] }],
-    };
-    const PayloadValidator1 = $.ajv.compile(schema_params);
-    fastify.get<{Params:{uid:string, year:number, month:number}}>('/group/group/serial/settlement/:uid/ :year/ :month', {schema}, async (req, res)=>{
-        if ( !PayloadValidator1(req.params) ) {
-            return res.status(400).send({
-                scope:req.routerPath,
-                code: ErrorCode.INVALID_REQUEST_PAYLOAD,
-                msg: "Request payload is invalid!",
-                detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
-            });
-        }
-        const {uid, year, month} = req.params!;
-        console.log(req.params);
-        console.log({uid, year, month});
-
-
-        const {rows:user_transition_info} = await Postgres.query<{
-            sid:RoskaMembers['sid'], 
-            mid:RoskaMembers['mid'], 
-            basic_unit_amount: RoskaSerials['basic_unit_amount'],
-            cycles:RoskaSerials['cycles'],
-            current_cycles:number,
-            transition:RoskaMembers['transition'], 
-            transit_to:RoskaMembers['transit_to'],
-            total: number,
-            group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
-        }>(`
-            SELECT DISTINCT 
-                m.sid, 
-                m.mid,
-                s.basic_unit_amount,
-                s.cycles,
-                m.transition,
-                m.transit_to,
-                COALESCE(
-                    (
-                        SELECT
-                            jsonb_agg( jsonb_build_object(
-                                'gid', rg.gid, 
-                                'bid_amount', rg.bid_amount,
-                                'win_amount', (CASE 
-                                    WHEN rg.gid = m.gid THEN rg.win_amount 
-                                    WHEN rg.gid < m.gid THEN s.basic_unit_amount - rg.bid_amount
-                                    ELSE s.basic_unit_amount END)
-                            ) ORDER BY rg.gid, rg.sid)
-                        FROM 
-                            roska_groups rg
-                        WHERE 
-                            rg.sid = m.sid AND 
-                            rg.mid <> '' AND 
-                            EXTRACT(YEAR FROM win_time) <= $2 AND
-                            EXTRACT(MONTH FROM win_time) <= $3
-                    ), '[]'::jsonb) AS group_info
-            FROM 
-                roska_members m
-            INNER JOIN 
-                roska_serials s ON m.sid=s.sid
-            WHERE 
-                m.uid = $1
-            ORDER BY 
-                m.sid;`, [uid, year, month]);
+        };
+        const schema = {
+            description: 'admin各會期結算',
+            summary: 'admin各會期結算',
+            params: schema_params,
+            security: [{ bearerAuth: [] }],
+        };
+        const PayloadValidator1 = $.ajv.compile(schema_params);
+        fastify.get<{Params:{uid:string, year:number, month:number}}>('/group/group/serial/settlement/:uid/ :year/ :month', {schema}, async (req, res)=>{
+            if ( !PayloadValidator1(req.params) ) {
+                return res.status(400).send({
+                    scope:req.routerPath,
+                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                    msg: "Request payload is invalid!",
+                    detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+                });
+            }
+            const {uid, year, month} = req.params!;
+            console.log(req.params);
+            console.log({uid, year, month});
 
 
-        return res.status(200).send(user_transition_info);
-    });
-}
+            const {rows:user_transition_info} = await Postgres.query<{
+                sid:RoskaMembers['sid'], 
+                mid:RoskaMembers['mid'], 
+                basic_unit_amount: RoskaSerials['basic_unit_amount'],
+                cycles:RoskaSerials['cycles'],
+                current_cycles:number,
+                transition:RoskaMembers['transition'], 
+                transit_to:RoskaMembers['transit_to'],
+                total: number,
+                group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
+            }>(`
+                SELECT DISTINCT 
+                    m.sid, 
+                    m.mid,
+                    s.basic_unit_amount,
+                    s.cycles,
+                    m.transition,
+                    m.transit_to,
+                    COALESCE(
+                        (
+                            SELECT
+                                jsonb_agg( jsonb_build_object(
+                                    'gid', rg.gid, 
+                                    'bid_amount', rg.bid_amount,
+                                    'win_amount', (CASE 
+                                        WHEN rg.gid = m.gid THEN rg.win_amount 
+                                        WHEN rg.gid < m.gid THEN s.basic_unit_amount - rg.bid_amount
+                                        ELSE s.basic_unit_amount END)
+                                ) ORDER BY rg.gid, rg.sid)
+                            FROM 
+                                roska_groups rg
+                            WHERE 
+                                rg.sid = m.sid AND 
+                                rg.mid <> '' AND 
+                                EXTRACT(YEAR FROM win_time) <= $2 AND
+                                EXTRACT(MONTH FROM win_time) <= $3
+                        ), '[]'::jsonb) AS group_info
+                FROM 
+                    roska_members m
+                INNER JOIN 
+                    roska_serials s ON m.sid=s.sid
+                WHERE 
+                    m.uid = $1
+                ORDER BY 
+                    m.sid;`, [uid, year, month]);
 
 
-
-
+            return res.status(200).send(user_transition_info);
+        });
+    }
      /** 產會期編號 **/
 	{
         const schema_params = {
@@ -137,7 +133,7 @@ export = async function(fastify: FastifyInstance) {
 
             
             
-            let group_sql_list:string[] = [];
+            let group_sql_list:string[] = [], first_bid_start_time = new Date();
             const startTime = new Date(group_serial.bid_start_time);
             for (let index = 0; index <= group_serial.cycles; index++) {
 
@@ -145,17 +141,6 @@ export = async function(fastify: FastifyInstance) {
                 const gid = `${sid}-t`  + `${index}`.padStart(2, '0');
 
                 if (index === 0) {
-                    // NOET: Calculate Start Time
-                    let bid_start_time:Date;
-                    if (group_serial.frequency === 'monthly') {
-                        bid_start_time = calculateMonthlyBitStartTime(startTime, 0);
-                    } 
-                    else {
-                        bid_start_time = calculateBiWeeklyBitStartTime(startTime, 0)
-                    }
-                    console.log(bid_start_time);
-
-
                     // Add the member information to the list
                     const payload_0:Partial<RoskaGroups> = {
                          gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
@@ -168,6 +153,39 @@ export = async function(fastify: FastifyInstance) {
                         VALUES (${Object.keys(payload_0).map(e => `{${e}}` ).join(', ')})
                         ON CONFLICT DO NOTHING;`, payload_0)
                     )
+                }
+                else
+                if (index === 1) {
+                    // NOET: Calculate Start Time
+                    let bid_start_time:Date;
+                    if (group_serial.frequency === 'monthly') {
+                        bid_start_time = calculateMonthlyBitStartTime(startTime, index-1);
+                    } 
+                    else {
+                        bid_start_time = calculateBiWeeklyBitStartTime(startTime, index-1)
+                    }
+
+                    if (first_bid_start_time.getMonth() === bid_start_time.getMonth()) {
+                        const payload_0:Partial<RoskaGroups> = {
+                            gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
+                            bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
+                            bid_start_time: new Date(first_bid_start_time.getFullYear(), first_bid_start_time.getMonth(), 10).toISOString(), 
+                            win_time: new Date().toISOString() 
+                        }                    
+                        group_sql_list = [PGDelegate.format(`
+                           INSERT INTO roska_groups (${Object.keys(payload_0).join(', ')})
+                           VALUES (${Object.keys(payload_0).map(e => `{${e}}` ).join(', ')})
+                           ON CONFLICT DO NOTHING;`, payload_0)
+                        ];
+                    }
+
+                    // Add the member information to the list
+                    const payload:Partial<RoskaGroups> = { gid, sid, bid_start_time: new Date(bid_start_time).toISOString() }
+                    group_sql_list.push(PGDelegate.format(`
+                        INSERT INTO roska_groups (${Object.keys(payload).join(', ')})
+                        VALUES (${Object.keys(payload).map(e => `{${e}}` ).join(', ')})
+                        ON CONFLICT DO NOTHING;`, payload)
+                    );
                 }
                 else {
                     // NOET: Calculate Start Time
@@ -200,10 +218,13 @@ export = async function(fastify: FastifyInstance) {
             console.log(first_member);
             
             group_sql_list.push(first_member);
-
-
             await Postgres.query(group_sql_list.join('\n'));
-            
+
+            await Postgres.query(`
+                UPDATE roska_serials 
+                SET bid_end_time = (SELECT bid_end_time FROM roska_groups WHERE sid=$1 ORDER BY gid DESC LIMIT 1)
+                WHERE sid=$1;
+            `, [sid]);
             
 			res.status(200).send({});
 		});

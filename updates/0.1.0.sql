@@ -186,10 +186,10 @@ DECLARE
     duration INT;
 BEGIN
     IF NEW.frequency = 'monthly' THEN
-        duration := NEW.member_count; -- Use the member_count as the duration
+        duration := NEW.cycles; -- Use the member_count as the duration
         NEW.bid_end_time := DATE_TRUNC('day', NEW.bid_start_time) + (duration || ' months'::TEXT)::INTERVAL - INTERVAL '1 second';
     ELSIF NEW.frequency = 'biweekly' THEN
-        duration := NEW.member_count * 2; -- Biweekly, so multiply by 2
+        duration := NEW.cycles * 2; -- Biweekly, so multiply by 2
         NEW.bid_end_time := DATE_TRUNC('day', NEW.bid_start_time) + (duration || ' weeks'::TEXT)::INTERVAL - INTERVAL '1 second';
     END IF;  
     
@@ -239,8 +239,8 @@ CREATE OR REPLACE FUNCTION set_roska_groups_bid_end_time()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Set the time part to 23:59:59
-    NEW.bid_end_time := DATE_TRUNC('day', NEW.bid_start_time) + INTERVAL '4 days - 1 second';
-    NEW.installment_deadline := DATE_TRUNC('day', NEW.bid_end_time) + INTERVAL '6 days - 1 second';
+    NEW.bid_end_time := DATE_TRUNC('day', NEW.bid_start_time) + INTERVAL '7 days - 1 second';
+    NEW.installment_deadline := DATE_TRUNC('day', NEW.bid_end_time) + INTERVAL '7 days - 1 second';
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

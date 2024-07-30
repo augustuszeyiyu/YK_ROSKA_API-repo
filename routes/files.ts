@@ -163,7 +163,7 @@ export = async function(fastify: FastifyInstance) {
                 transition:RoskaMembers['transition'], 
                 transit_to:RoskaMembers['transit_to'],
                 total: number,
-                group_info: (Partial<RoskaGroups>&{date:string})[],
+                group_info: (Partial<RoskaGroups>&{session:Number, date:string})[],
             }>(`
                 SELECT DISTINCT 
                 m.sid, 
@@ -177,7 +177,8 @@ export = async function(fastify: FastifyInstance) {
                     (
                         SELECT
                             jsonb_agg( jsonb_build_object(
-                                'gid', rg.gid, 
+                                'gid', rg.gid,
+                                'session', CAST(Right(rg.gid, 2) AS INTEGER),
                                 'bid_start_time', rg.bid_start_time,
                                 'date', extract(year from rg.bid_start_time)-1911||'-'||extract(month from rg.bid_start_time),
                                 'win_amount', (CASE 
@@ -215,6 +216,7 @@ export = async function(fastify: FastifyInstance) {
             ];
 
             const data_list: any[] = [];
+            let   win = 0;
             for (const elm of user_transition_info) {
                 const data = {
                     mid: elm.mid,
@@ -222,20 +224,32 @@ export = async function(fastify: FastifyInstance) {
                     bid_start_time: elm.group_info[0]?.date // Ensure group_info[0] exists
                 };
 
-                for (const glm of elm.group_info) {
+                for (let index = 0; index < elm.group_info.length; index++) {
+
+                    const glm = elm.group_info[index];
                     const find = columns.find(elm => elm.key === `_${glm.date}`);
+                    
                     if (!find) {
                         columns.push({ header: `${glm.date}`, key: `_${glm.date}`, width: 10 });
                     }
                     data[`_${glm.date}`] = glm.win_amount;
+
+                    if (Number(glm.win_amount) > 0) ++win;
                 }
                 
                 console.log(data, columns);
                 data_list.push(data);                
             }
 
+            data_list.push({
+                mid:    `總會數：${user_transition_info.length}`,
+                name:   `得標：${win}`,
+                bid_start_time:     `活會數：${user_transition_info.length-win}`,
+                [columns[4].key]:   ``
+            })
             worksheet.columns = columns;
             worksheet.addRows(data_list);
+
 
             // Check if file exists or not
             const uploadDir = Config.storage_root;
