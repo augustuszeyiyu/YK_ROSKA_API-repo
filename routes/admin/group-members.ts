@@ -246,13 +246,14 @@ export = async function(fastify: FastifyInstance) {
                         type: 'array', 
                         items: { type: 'string' }
                     },
+                    transition: { type: 'number' }
                 },
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{mids:RoskaMembers['mid'][]}}>('/group/member/transition', {schema}, async (req, res)=>{
-            const {mids} = req.body;
+        fastify.post<{Body:{mids:RoskaMembers['mid'][], transition:RoskaMembers['transition']}}>('/group/member/transition', {schema}, async (req, res)=>{
+            const {mids, transition} = req.body;
             
             // NOTE: query handling_fee, transition_fee, interest_bonus
             const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);           
@@ -262,17 +263,20 @@ export = async function(fastify: FastifyInstance) {
 
 
             const update_promise:string[] = [];
-            const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials>(`
-                SELECT * 
+            const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
+                SELECT *, s.uid as header 
                 FROM roska_members m
                 INNER JOIN roska_serials s ON m.sid = s.sid
                 WHERE m.mid = ANY($1);
             `, [mids]);
 
 
-            for (const {mid, gid, sid, cycles, basic_unit_amount} of members_info) {                          
+            for (const {mid, gid, sid, cycles, basic_unit_amount, header} of members_info) {                          
                 const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, basic_unit_amount, 1000, gid, 1); 
-                const sql_1 = PGDelegate.format(`UPDATE roska_members SET transition = 1, win_amount = {win_amount} WHERE sid={sid} AND mid = {mid};`, {sid, mid, win_amount});
+                const sql_1 = PGDelegate.format(`
+                    UPDATE roska_members 
+                    SET transition = {transition}, win_amount = {win_amount}, transit_to = {transit_to}
+                    WHERE sid={sid} AND mid = {mid};`, {sid, mid, win_amount, transition, transit_to: header});
                 update_promise.push(sql_1);
 
                 const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {gid, win_amount});
