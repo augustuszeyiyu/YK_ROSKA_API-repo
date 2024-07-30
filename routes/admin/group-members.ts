@@ -5,7 +5,7 @@ import { RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { GroupError } from "/lib/error/gruop-error";
-import { UserError } from "/lib/error";
+import { BaseError, UserError } from "/lib/error";
 import { SysVar } from "/data-type/sysvar";
 import { cal_win_amount } from "/lib/cal-win-amount";
 
@@ -255,6 +255,11 @@ export = async function(fastify: FastifyInstance) {
         fastify.post<{Body:{mids:RoskaMembers['mid'][], transition:RoskaMembers['transition']}}>('/group/member/transition', {schema}, async (req, res)=>{
             const {mids, transition} = req.body;
             
+            if ([0, 1].includes(transition) === false) {
+                return res.errorHandler(BaseError.BAD_REQUEST, {transition})
+            }
+
+            
             // NOTE: query handling_fee, transition_fee, interest_bonus
             const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);           
             const handling_fee = Number(sysvar[0].value);
@@ -272,7 +277,7 @@ export = async function(fastify: FastifyInstance) {
 
 
             for (const {mid, gid, sid, cycles, basic_unit_amount, header} of members_info) {                          
-                const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, basic_unit_amount, 1000, gid, 1); 
+                const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, basic_unit_amount, 1000, gid, transition); 
                 const sql_1 = PGDelegate.format(`
                     UPDATE roska_members 
                     SET transition = {transition}, win_amount = {win_amount}, transit_to = {transit_to}
