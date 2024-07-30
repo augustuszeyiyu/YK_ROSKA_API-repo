@@ -259,7 +259,7 @@ export = async function(fastify: FastifyInstance) {
                 return res.errorHandler(BaseError.BAD_REQUEST, {transition})
             }
 
-            
+
             // NOTE: query handling_fee, transition_fee, interest_bonus
             const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);           
             const handling_fee = Number(sysvar[0].value);
@@ -284,7 +284,7 @@ export = async function(fastify: FastifyInstance) {
                     WHERE sid={sid} AND mid = {mid};`, {sid, mid, win_amount, transition, transit_to: header});
                 update_promise.push(sql_1);
 
-                const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {gid, win_amount});
+                const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {sid, gid, win_amount});
                 update_promise.push(sql_2);
             }
             await Postgres.query(update_promise.join('\n '));  
