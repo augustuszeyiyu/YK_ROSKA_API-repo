@@ -64,9 +64,9 @@ export = async function(fastify: FastifyInstance) {
                 INNER JOIN 
                     roska_serials s ON m.sid=s.sid
                 WHERE 
-                    m.mid = IN (SELECT mid FROM roska_members WHERE uid = $1)
+                    m.mid IN (SELECT mid FROM roska_members WHERE uid = $1)
                 ORDER BY 
-                m.sid;`, [uid]);
+                    m.sid;`, [uid]);
 
 
             return res.status(200).send(user_transition_info);
