@@ -1,4 +1,3 @@
-import $ from "shared-storage";
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
 import { RoskaMembers, RoskaSerials } from '/data-type/groups';
@@ -231,6 +230,50 @@ export = async function(fastify: FastifyInstance) {
             await Postgres.query<RoskaSerials>(`DELETE FROM roska_members WHERE mid=$1;`, [mid]);
             
 
+            return res.status(200).send({});
+        });
+    }
+    /** admin 幫會員下標 **/
+    {
+        const schema = {
+			description: 'admin 幫會員下標',
+			summary: 'admin 幫會員下標',
+            body: {
+                type: 'object',
+                properties:{
+                    mids: {
+                        type: 'array', 
+                        items: { type: 'string' }
+                    },
+                    gid: { type: 'string' }
+                },
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.post<{Body:{mids:RoskaMembers['mid'][], gid:RoskaMembers['gid']}}>('/group/member/bid', {schema}, async (req, res)=>{
+            const {mids, gid} = req.body;
+            
+
+            const update_promise:string[] = [];
+            const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
+                SELECT *, s.uid as header 
+                FROM roska_members m
+                INNER JOIN roska_serials s ON m.sid = s.sid
+                WHERE m.mid = ANY($1);
+            `, [mids]);
+            
+
+            for (const {mid, sid, uid} of members_info) {                
+                const sql_1 = PGDelegate.format(`
+                    INSERT INTO roska_bid (mid, gid, sid, uid, bid_amount)
+                    VALUE ({mid}, {gid}, {sid}, {uid}, {bid_amount})
+                    ON CONFICT (mid, gid, sid, uid) DO NOTHING;`, 
+                    {mid, gid, sid, uid, bid_amount:1000});
+                update_promise.push(sql_1);
+            }
+            await Postgres.query(update_promise.join('\n '));  
+            
             return res.status(200).send({});
         });
     }
