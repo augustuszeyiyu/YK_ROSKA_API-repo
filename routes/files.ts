@@ -167,8 +167,9 @@ export = async function(fastify: FastifyInstance) {
                 group_info: (Partial<RoskaGroups>&{session:Number, date:string})[],
             }>(`
                 SELECT DISTINCT 
-                m.sid, 
                 m.mid,
+                m.uid,
+                m.sid, 
                 s.basic_unit_amount,
                 s.cycles,
                 s.bid_start_time,
@@ -186,7 +187,7 @@ export = async function(fastify: FastifyInstance) {
                                     WHEN rg.gid = m.gid THEN rg.win_amount
                                     WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
                                     WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                    ELSE -s.basic_unit_amount END)
+                                    ELSE (CASE WHEN m.transition = 1 THEN 0 ELSE -s.basic_unit_amount END) END)
                             ) ORDER BY rg.gid, rg.sid)
                         FROM 
                             roska_groups rg
@@ -204,6 +205,7 @@ export = async function(fastify: FastifyInstance) {
                     m.sid;`, [uid]);
 
 
+            console.log(user_transition_info);
             
             // Initialize Excel workbook and worksheet
             const workbook = new ExcelJS.Workbook();
@@ -213,7 +215,7 @@ export = async function(fastify: FastifyInstance) {
             const columns = [
                 { header: '會員編號', key: 'mid', width: 20 },
                 { header: '姓名', key: 'name', width: 20 },
-                { header: '起會日', key: 'bid_start_time', width: 10 },
+                { header: '起會日', key: 'bid_start_time', width: 20 },
             ];
 
             const data_list: any[] = [];
@@ -228,20 +230,28 @@ export = async function(fastify: FastifyInstance) {
                     bid_start_time: elm.group_info[0]?.date // Ensure group_info[0] exists
                 };
 
+                let isTransition = false;
                 for (let index = 0; index < elm.group_info.length; index++) {
 
                     const glm = elm.group_info[index];
                     const find = columns.find(elm => elm.key === `_${glm.date}`);
                     
                     if (!find) {
-                        columns.push({ header: `${glm.date}`, key: `_${glm.date}`, width: 10 });
+                        columns.push({ header: `${glm.date}`, key: `_${glm.date}`, width: 15 });
                     }
-                    data[`_${glm.date}`] = glm.win_amount;
+                    
 
-                    if (Number(glm.win_amount) > 0) ++win;
+                    if (Number(glm.win_amount) > 0) {
+                        ++win;
+                        data[`_${glm.date}`] = elm.transition === 1? `轉讓 ${glm.win_amount}`: `${glm.win_amount}`;
+                        isTransition = true;
+                    }
+                    else {
+                        data[`_${glm.date}`] = glm.win_amount;
+                    }
                 }
                 
-                console.log(data, columns);
+                // console.log(data, columns);
                 data_list.push(data);                
             }
 

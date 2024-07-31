@@ -36,8 +36,9 @@ export = async function(fastify: FastifyInstance) {
                 group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
             }>(`
                 SELECT DISTINCT 
-                m.sid, 
                 m.mid,
+                m.uid,
+                m.sid,
                 s.basic_unit_amount,
                 s.cycles,
                 s.bid_start_time,
@@ -52,7 +53,7 @@ export = async function(fastify: FastifyInstance) {
                                     WHEN rg.gid = m.gid THEN rg.win_amount
                                     WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
                                     WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                    ELSE -s.basic_unit_amount END)
+                                    ELSE (CASE WHEN m.transition = 1 THEN 0 ELSE -s.basic_unit_amount END) END)
                             ) ORDER BY rg.gid, rg.sid)
                         FROM 
                             roska_groups rg
@@ -108,8 +109,9 @@ export = async function(fastify: FastifyInstance) {
                 group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
             }>(`
                 SELECT DISTINCT 
-                    m.sid, 
                     m.mid,
+                    m.uid,
+                    m.sid, 
                     s.basic_unit_amount,
                     s.cycles,
                     m.transition,
@@ -121,9 +123,10 @@ export = async function(fastify: FastifyInstance) {
                                     'gid', rg.gid, 
                                     'bid_amount', rg.bid_amount,
                                     'win_amount', (CASE 
-                                        WHEN rg.gid = m.gid THEN rg.win_amount 
-                                        WHEN rg.gid < m.gid THEN s.basic_unit_amount - rg.bid_amount
-                                        ELSE s.basic_unit_amount END)
+                                        WHEN rg.gid = m.gid THEN rg.win_amount
+                                        WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+                                        WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+                                        ELSE (CASE WHEN m.transition = 1 THEN 0 ELSE -s.basic_unit_amount END) END)
                                 ) ORDER BY rg.gid, rg.sid)
                             FROM 
                                 roska_groups rg
