@@ -247,11 +247,11 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send({});
         });
     }
-    /** admin 幫會員下標 **/
+    /** admin 幫會員下標或刪除標 **/
     {
         const schema = {
-			description: 'admin 幫會員下標',
-			summary: 'admin 幫會員下標',
+			description: 'admin 幫會員下標或刪除標',
+			summary: 'admin 幫會員下標或刪除標',
             body: {
                 type: 'object',
                 properties:{
@@ -259,36 +259,52 @@ export = async function(fastify: FastifyInstance) {
                         type: 'array', 
                         items: { type: 'string' }
                     },
-                    gid: { type: 'string' }
+                    gid: { type: 'string' },
+                    isBbid: { type: 'boolean' }
                 },
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.post<{Body:{mids:RoskaMembers['mid'][], gid:RoskaMembers['gid']}}>('/group/member/bid', {schema}, async (req, res)=>{
-            const {mids, gid} = req.body;
+        fastify.post<{Body:{mids:RoskaMembers['mid'][], gid:RoskaMembers['gid'], isBbid:boolean}}>('/group/member/bid', {schema}, async (req, res)=>{
+            const {mids, gid, isBbid} = req.body;
             
-
-            const update_promise:string[] = [];
-            const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
-                SELECT *, s.uid as header 
-                FROM roska_members m
-                INNER JOIN roska_serials s ON m.sid = s.sid
-                WHERE m.mid = ANY($1);
-            `, [mids]);
-            
-
-            for (const {mid, sid, uid} of members_info) {                
-                const sql_1 = PGDelegate.format(`
-                    INSERT INTO roska_bids (mid, gid, sid, uid, bid_amount)
-                    VALUE ({mid}, {gid}, {sid}, {uid}, {bid_amount})
-                    ON CONFICT (mid, gid, sid, uid) DO NOTHING;`, 
-                    {mid, gid, sid, uid, bid_amount:1000});
-                update_promise.push(sql_1);
+            if (isBbid === undefined || isBbid === true) {
+                const update_promise:string[] = [];
+                const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
+                    SELECT *, s.uid as header 
+                    FROM roska_members m
+                    INNER JOIN roska_serials s ON m.sid = s.sid
+                    WHERE m.mid = ANY($1);
+                `, [mids]);
+                
+    
+                for (const {mid, sid, uid} of members_info) {                
+                    const sql_1 = PGDelegate.format(`
+                        INSERT INTO roska_bids (mid, gid, sid, uid, bid_amount)
+                        VALUE ({mid}, {gid}, {sid}, {uid}, {bid_amount})
+                        ON CONFICT (mid, gid, sid, uid) DO NOTHING;`, 
+                        {mid, gid, sid, uid, bid_amount:1000});
+                    update_promise.push(sql_1);
+                }
+                await Postgres.query(update_promise.join('\n ')); 
             }
-            await Postgres.query(update_promise.join('\n '));  
+            else {
+                await Postgres.query(`
+                    DELETE FROM roska_bids 
+                    WHERE mid=ANY($1) AND gid=$2;`,
+                    [mids, gid]); 
+            }
+
+
+            const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
+                SELECT u.name, b.* 
+                FROM roska_bids b
+                INNER JOIN users u ON b.uid = u.uid
+                WHERE b.gid = $1;
+            `, [gid]);
             
-            return res.status(200).send({});
+            return res.status(200).send(members_info);
         });
     }
     /** admin 搜尋有下標的會員 **/
