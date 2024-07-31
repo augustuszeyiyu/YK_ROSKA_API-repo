@@ -153,7 +153,7 @@ export = async function(fastify: FastifyInstance) {
 		fastify.get<{Params:{uid:RoskaMembers['uid']}}>('/file/member-pay-record', {schema}, async (req, res) => {
             const {uid} = req.session.token!;
 
-            const {rows:[user_name]} = await Postgres.query<{name:User['name']}>(`SELECT name FROM users WHERE uid = $1`, [uid]);
+            const {rows:[USER]} = await Postgres.query<User>(`SELECT * FROM users WHERE uid = $1`, [uid]);
 
             const {rows:user_transition_info} = await Postgres.query<{
                 sid:RoskaMembers['sid'], 
@@ -206,7 +206,7 @@ export = async function(fastify: FastifyInstance) {
             
             // Initialize Excel workbook and worksheet
             const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet(`會員開標付款紀錄表-${user_name.name}`);
+            const worksheet = workbook.addWorksheet(`會員開標付款紀錄表-${USER.name}`);
         
             // Define columns
             const columns = [
@@ -220,7 +220,7 @@ export = async function(fastify: FastifyInstance) {
             for (const elm of user_transition_info) {
                 const data = {
                     mid: elm.mid,
-                    name: user_name.name,
+                    name: USER.name,
                     bid_start_time: elm.group_info[0]?.date // Ensure group_info[0] exists
                 };
 
@@ -253,7 +253,7 @@ export = async function(fastify: FastifyInstance) {
 
             // Check if file exists or not
             const uploadDir = Config.storage_root;
-            const newFilename = `user-payment-report-${uid}.xlsx`;
+            const newFilename = `user-payment-report-${USER.contact_mobile_number}.xlsx`;
             const newFilePath = path.resolve(uploadDir, newFilename);
 
             // Delete existing file if it exists

@@ -309,7 +309,7 @@ export = async function(fastify: FastifyInstance) {
             const {gid} = req.params;
             
             const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
-                SELECT * 
+                SELECT u.name, b.* 
                 FROM roska_bids b
                 INNER JOIN users u ON b.uid = u.uid
                 WHERE b.gid = $1;
