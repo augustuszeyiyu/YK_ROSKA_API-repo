@@ -278,7 +278,7 @@ export = async function(fastify: FastifyInstance) {
 			res.status(200).send({});
 		});
     }
-
+    /** 搜尋該團下的成員 **/
     {
         const schema = {
 			description: '搜尋該團下的成員',
@@ -298,7 +298,7 @@ export = async function(fastify: FastifyInstance) {
             const {sid} = req.params;
 
             const {rows} = await Postgres.query(
-                `SELECT m.mid, m.sid, u.uid, u.name, m.gid
+                `SELECT m.mid, m.sid, u.uid, u.name, m.gid, m.win_amount
                 FROM roska_members m 
                 INNER JOIN users u ON m.uid=u.uid
                 WHERE m.sid=$1
