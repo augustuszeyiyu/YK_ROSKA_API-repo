@@ -217,10 +217,13 @@ export = async function(fastify: FastifyInstance) {
 
             const data_list: any[] = [];
             let   win = 0;
-            for (const elm of user_transition_info) {
+
+            for (let uindex = 0; uindex < user_transition_info.length; uindex++) {
+                const elm = user_transition_info[uindex];
+        
                 const data = {
                     mid: elm.mid,
-                    name: USER.name,
+                    name: `${USER.name} ${(uindex+1).toString().padStart(4, '0')}`,
                     bid_start_time: elm.group_info[0]?.date // Ensure group_info[0] exists
                 };
 
@@ -251,6 +254,41 @@ export = async function(fastify: FastifyInstance) {
             worksheet.addRows(data_list);
 
 
+            // NOTE: Add borders to the header row
+            const headerRow = worksheet.getRow(1);
+            headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                cell.border = {
+                    top: { style: 'thick' },
+                    left: { style: 'thick' },
+                    bottom: { style: 'thick' },
+                    right: { style: 'thick' }
+                },
+                cell.font = { bold: true };
+            });
+            // NOTE: Add borders to the entire worksheet
+            worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+                row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            });
+            const footerRow = worksheet.lastRow;
+            if (footerRow) {
+                footerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    cell.border = {
+                        top: { style: 'thick' },
+                        left: { style: 'thick' },
+                        bottom: { style: 'thick' },
+                        right: { style: 'thick' }
+                    };
+                    cell.font = { bold: true };
+                });
+            }
+
             // Check if file exists or not
             const uploadDir = Config.storage_root;
             const newFilename = `user-payment-report-${USER.contact_mobile_number}.xlsx`;
@@ -280,7 +318,12 @@ export = async function(fastify: FastifyInstance) {
 
             await Postgres.query(sql);
 
-            res.status(200).send({ url: `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}` });
+            const url = `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`;
+            console.log(url, path.resolve(newFilePath, newFilename));
+            
+
+            // NOTE: Serve the file for download
+            res.status(200).send({url});
         });
     }
 };
