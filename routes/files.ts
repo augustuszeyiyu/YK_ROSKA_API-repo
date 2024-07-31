@@ -95,7 +95,8 @@ export = async function(fastify: FastifyInstance) {
                 file_path: path.resolve(uploadDir, newFilename),
                 file_name: newFilename,
                 encoding,
-                mimetype
+                mimetype,
+                url: `${Config.serve_at.url}/public/${newFilename}`
             }
 
 
@@ -127,8 +128,8 @@ export = async function(fastify: FastifyInstance) {
             
 
             const sql = PGDelegate.format(`
-                INSERT INTO files(fid, uid, file_path, file_name, encoding, mimetype)
-                VALUES ({fid}, {uid}, {file_path}, {file_name}, {encoding}, {mimetype})
+                INSERT INTO files(fid, uid, file_path, file_name, encoding, mimetype, url)
+                VALUES ({fid}, {uid}, {file_path}, {file_name}, {encoding}, {mimetype}, {url})
             `, insert_data);
 
             await Postgres.query(sql);
@@ -308,18 +309,19 @@ export = async function(fastify: FastifyInstance) {
                 file_path: newFilePath,
                 file_name: newFilename,
                 encoding: 'OpenXML format',
-                mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                url: `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`
             };
 
             const sql = PGDelegate.format(`
-                INSERT INTO files (fid, uid, file_path, file_name, encoding, mimetype)
-                VALUES ({fid}, {uid}, {file_path}, {file_name}, {encoding}, {mimetype})
+                INSERT INTO files (fid, uid, file_path, file_name, encoding, mimetype, url)
+                VALUES ({fid}, {uid}, {file_path}, {file_name}, {encoding}, {mimetype}, {url})
             `, insert_data);
 
             await Postgres.query(sql);
 
             const url = `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`;
-            console.log(url, path.resolve(newFilePath, newFilename));
+            console.log(url, uploadDir, path.resolve(uploadDir, newFilename));
             
 
             // NOTE: Serve the file for download
