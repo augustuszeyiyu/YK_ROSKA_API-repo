@@ -243,10 +243,10 @@ export = async function(fastify: FastifyInstance) {
 
 
     //         // NOTE: query handling_fee, transition_fee, interest_bonus
-    //         const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);           
-    //         const handling_fee = Number(sysvar[0].value);
-    //         const transition_fee = Number(sysvar[1].value);
-    //         const interest_bonus = Number(sysvar[2].value);
+    //         const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'interest_bonus', 'transition_fee') ORDER BY key ASC;`);            
+            // const handling_fee = Number(sysvar[0].value);
+            // const interest_bonus = Number(sysvar[1].value);
+            // const transition_fee = Number(sysvar[2].value);
 
 
             

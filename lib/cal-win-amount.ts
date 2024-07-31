@@ -4,7 +4,6 @@ export function cal_win_amount(handle_fee:number, interest_bonus:number, trasfer
 
     if (T === 1 &&T >= 20) trasfer = 0;
 
-
     switch (trasfer) {
         case 0: {
             if (T < 20) {

@@ -261,11 +261,11 @@ export = async function(fastify: FastifyInstance) {
 
 
             // NOTE: query handling_fee, transition_fee, interest_bonus
-            const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'transition_fee', 'interest_bonus') ORDER BY key ASC;`);           
+            const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'interest_bonus', 'transition_fee') ORDER BY key ASC;`);            
             const handling_fee = Number(sysvar[0].value);
-            const transition_fee = Number(sysvar[1].value);
-            const interest_bonus = Number(sysvar[2].value);
-
+            const interest_bonus = Number(sysvar[1].value);
+            const transition_fee = Number(sysvar[2].value);
+            
 
             const update_promise:string[] = [];
             const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
@@ -274,10 +274,11 @@ export = async function(fastify: FastifyInstance) {
                 INNER JOIN roska_serials s ON m.sid = s.sid
                 WHERE m.mid = ANY($1);
             `, [mids]);
-
+            
 
             for (const {mid, gid, sid, cycles, basic_unit_amount, header} of members_info) {
-                const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, basic_unit_amount, 1000, gid, transition); 
+                const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, Number(basic_unit_amount), 1000, gid, transition); 
+                
                 const sql_1 = PGDelegate.format(`
                     UPDATE roska_members 
                     SET transition = {transition}, win_amount = {win_amount}, transit_to = {transit_to}
