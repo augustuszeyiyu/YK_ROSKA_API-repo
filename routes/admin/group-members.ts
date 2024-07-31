@@ -31,7 +31,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.get<{Params:{sid:RoskaSerials['sid'], gid:RoskaGroups['gid']}}>('/group/member/:sid/:gid', {schema}, async (req, res)=>{
             const {sid, gid} = req.params;
 
-            if (sid !== undefined && gid === undefined) {
+            if (sid !== undefined && (!gid || gid === 'null')) {
                 const {rows} = await Postgres.query(`
                     SELECT u.name, m.*
                     FROM roska_members m 
