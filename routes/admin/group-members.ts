@@ -1,6 +1,6 @@
 import { FastifyInstance } 	from "fastify";
 import Postgres from '/data-source/postgres.js';
-import { RoskaMembers, RoskaSerials } from '/data-type/groups';
+import { RoskaGroups, RoskaMembers, RoskaSerials } from '/data-type/groups';
 import { User } from '/data-type/users';
 import { PGDelegate } from 'pgdelegate';
 import { GroupError } from "/lib/error/gruop-error";
@@ -12,35 +12,49 @@ import { cal_win_amount } from "/lib/cal-win-amount";
 type PaginateCursorUser = PaginateCursor<RoskaSerials[]>;
 
 export = async function(fastify: FastifyInstance) {
-    /* 搜尋該團下的成員 */
+    /* 用 sid 搜尋該團下的成員 */
     {
         const schema = {
-			description: '搜尋該團下的成員',
-			summary: '搜尋該團下的成員',
+			description: '用 sid 搜尋該團下的成員',
+			summary: '用 sid 搜尋該團下的成員',
             params: {
-                description: '搜尋該團下的成員',
+                description: '用 sid 搜尋該團下的成員',
                 type: 'object',
 				properties: {
-                    sid: { type: 'string' }
+                    sid: { type: 'string' },
+                    gid: { type: 'string' }
                 },
             },
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/group/member/:sid', {schema}, async (req, res)=>{
-            const {uid}:{uid:User['uid']} = req.session.token!;
-            const {sid} = req.params;
+        fastify.get<{Params:{sid:RoskaSerials['sid'], gid:RoskaGroups['gid']}}>('/group/member/:sid/:gid', {schema}, async (req, res)=>{
+            const {sid, gid} = req.params;
 
-            const {rows} = await Postgres.query(
-                `SELECT u.uid, u.name, m.*, 
-                FROM roska_members m 
-                INNER JOIN users u ON m.uid=u.uid
-                WHERE m.sid=$1
-                ORDER BY m.mid ASC;`,[sid]);
+            if (sid !== undefined && gid === undefined) {
+                const {rows} = await Postgres.query(`
+                    SELECT u.name, m.*
+                    FROM roska_members m 
+                    INNER JOIN users u ON m.uid=u.uid
+                    WHERE m.sid=$1
+                    ORDER BY m.mid ASC;`,[sid]);
+    
+                return res.status(200).send(rows);
+            }
+            else {
+                const {rows} = await Postgres.query(`
+                    SELECT u.name, m.*, b.bid_amount
+                    FROM roska_groups g
+                    LEFT JOIN roska_members m ON g.sid=m.sid
+                    LEFT JOIN roska_bids b ON m.mid = b.mid
+                    INNER JOIN users u ON m.uid=u.uid
+                    WHERE g.gid = $1
+                    ORDER BY m.mid ASC;`,[gid]);
 
-            return res.status(200).send(rows);
+                return res.status(200).send(rows);
+            }
         });
-    } 
+    }
     /* 新增會員入會 */
     {
         const schema = {
@@ -266,7 +280,7 @@ export = async function(fastify: FastifyInstance) {
 
             for (const {mid, sid, uid} of members_info) {                
                 const sql_1 = PGDelegate.format(`
-                    INSERT INTO roska_bid (mid, gid, sid, uid, bid_amount)
+                    INSERT INTO roska_bids (mid, gid, sid, uid, bid_amount)
                     VALUE ({mid}, {gid}, {sid}, {uid}, {bid_amount})
                     ON CONFICT (mid, gid, sid, uid) DO NOTHING;`, 
                     {mid, gid, sid, uid, bid_amount:1000});
@@ -277,11 +291,38 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send({});
         });
     }
-    /** 會員轉讓 **/
+    /** admin 搜尋有下標的會員 **/
     {
         const schema = {
-			description: '多名會員轉讓',
-			summary: '多名會員轉讓',
+			description: 'admin 搜尋有下標的會員',
+			summary: 'admin 搜尋有下標的會員',
+            params: {
+                type: 'object',
+                properties:{
+                    gid: { type: 'string' }
+                },
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.post<{Params:{gid:RoskaMembers['gid']}}>('/group/member/bid/:gid', {schema}, async (req, res)=>{
+            const {gid} = req.params;
+            
+            const {rows:members_info} = await Postgres.query<RoskaMembers&RoskaSerials&{header:string}>(`
+                SELECT * 
+                FROM roska_bids b
+                INNER JOIN users u ON b.uid = u.uid
+                WHERE b.gid = $1;
+            `, [gid]);
+            
+            return res.status(200).send(members_info);
+        });
+    }
+    /** admin 會員轉讓 **/
+    {
+        const schema = {
+			description: 'admin 多名會員轉讓',
+			summary: 'admin 多名會員轉讓',
             body: {
                 type: 'object',
                 properties:{
