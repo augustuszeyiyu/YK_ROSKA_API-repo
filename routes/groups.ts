@@ -264,18 +264,10 @@ export = async function(fastify: FastifyInstance) {
 
             const next = `${total_members}`.padStart(2, '0');
             const mid = `${sid}-${next}`;
-            const details = JSON.stringify([{
-                uid,
-                gid: `${sid}-t00`,
-                earn: 0,
-                pay: roska_serial.basic_unit_amount,
-                handling_fee: 0,
-                transition_fee: 0,
-            }]);
-            const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid, details) VALUES({mid}, {sid}, {uid}, {details});`, {mid, sid, uid, details});
-    
-            await Postgres.query(sql);
-
+            const member_sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
+            const detail_sql = PGDelegate.format(`INSERT INTO roska_details (mid, sid, uid) VALUES({mid}, {sid}, {uid}, {profit});`, {mid, sid, uid, profit:-roska_serial.basic_unit_amount});
+            const sql_list = [member_sql, detail_sql]
+            await Postgres.query(sql_list.join('\n'));
           
             
 			res.status(200).send({});
