@@ -221,32 +221,6 @@ export = async function(fastify: FastifyInstance) {
 
             return res.status(200).send(user_transition_info);
         });
-    }
-    /** 搜尋該會組會期 **/
-    {
-        const schema = {
-			description: '搜尋該會組會期',
-			summary: '搜尋該會組會期',
-            params: {
-                type: 'object',
-                properties:{
-                    sid: {type: 'string'}
-                }
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
-            const {uid} = req.session.token!;
-            if (uid === undefined) {
-                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-            }
-
-            const {sid} = req.params;
-            const {rows} = await Postgres.query(`SELECT * FROM roska_groups WHERE sid=$1 ORDER BY gid ASC`, [sid]);
-
-            return res.status(200).send(rows);
-        });
     } 
     /** 下標 **/
     {
