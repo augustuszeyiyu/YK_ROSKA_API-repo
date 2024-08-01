@@ -279,5 +279,4 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(row);
         });   
     }
-
 };

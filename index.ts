@@ -213,6 +213,7 @@ Promise.chain(async()=>{
 		.register((await import('/routes/register.js')).default,					{prefix:'/'})
 		.register((await import('/routes/users.js')).default,						{prefix:'/'})
 		.register((await import('/routes/groups.js')).default,						{prefix:'/'})
+		.register((await import('/routes/members.js')).default,						{prefix:'/'})
 		.register((await import('/routes/files.js')).default,						{prefix:'/'})
 		.register((await import('/routes/auth/auth.js')).default,					{prefix:'/auth'})
 		.register((await import('/routes/admin/admin.js')).default,					{prefix:'/admin'})

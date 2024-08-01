@@ -88,63 +88,6 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(rows);
         });
     }
-    /** 下標 **/
-    {
-        const schema = {
-			description: '下標',
-			summary: '下標',
-            body: {
-                type: 'object',
-				properties: {
-                    gid:        { type: 'string' },
-                    bid_amount: { type: 'number' },
-                },
-                required: ['gid', 'bid_amount']
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.post<{Body:{gid:RoskaBids['gid'], bid_amount:RoskaBids['bid_amount']}}>('/group/bid', {schema}, async (req, res)=>{
-            
-            const {uid}:{uid:User['uid']} = req.session.token!;
-
-            const {gid, bid_amount} = req.body;
-
-            
-            const {rows:[roska_group]} = await Postgres.query<RoskaGroups>(`SELECT * FROM roska_groups WHERE gid=$1;`, [gid]);
-
-            const {rows:[roska_serial]} = await Postgres.query<RoskaSerials>(`
-                SELECT * 
-                FROM roska_serials 
-                WHERE sid=$1 
-                AND max_bid_amount >= $2 
-                AND min_bid_amount <= $2;`, 
-                [roska_group.sid, bid_amount]);
-              
-            
-            if (roska_serial === undefined) {
-                return res.errorHandler(GroupError.INVALID_bid_amount);
-            }
-
-            const {rows:[roska_member]} = await Postgres.query<RoskaMembers>(`SELECT * FROM roska_members WHERE uid=$1 AND sid=$2;`, [uid, roska_group.sid]);
-
-
-            const sql = PGDelegate.format(`
-                INSERT INTO roska_bids(mid, gid, sid, uid, bid_amount) 
-                VALUES ({mid}, {gid}, {sid}, {uid}, {bid_amount})
-                RETURNING *;`, {
-                    mid: roska_member.mid,
-                    gid: roska_group.gid,
-                    sid: roska_member.sid,
-                    uid: roska_member.uid,
-                    bid_amount
-                });
-
-            const {rows:[row]} = await Postgres.query(sql);
-
-            return res.status(200).send(row);
-        });   
-    }
     /** 已加入的會組 **/
     {
             const schema = {
@@ -169,35 +112,6 @@ export = async function(fastify: FastifyInstance) {
     
                 return res.status(200).send(rows);
             });
-    }
-    /** 搜尋該團下的成員 **/
-    {
-        const schema = {
-			description: '搜尋該團下的成員',
-			summary: '搜尋該團下的成員',
-            params: {
-                description: '搜尋該團下的成員',
-                type: 'object',
-				properties: {
-                    sid: { type: 'string' }
-                },
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get<{Params:{sid:RoskaSerials['sid']}}>('/group/member/:sid', {schema}, async (req, res)=>{
-            const {uid}:{uid:User['uid']} = req.session.token!;
-            const {sid} = req.params;
-
-            const {rows} = await Postgres.query(
-                `SELECT m.mid, m.sid, u.uid, u.name, m.gid
-                FROM roska_members m 
-                INNER JOIN users u ON m.uid=u.uid
-                WHERE m.sid=$1
-                ORDER BY m.mid ASC;`,[sid]);
-
-            return res.status(200).send(rows);
-        });
     } 
     /** 會員轉讓 **/
     // {
