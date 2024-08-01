@@ -9,6 +9,78 @@ import { SysVar } from "/data-type/sysvar";
 
 
 export = async function(fastify: FastifyInstance) {
+    /** 新成立會組列表 **/
+    {
+        const schema = {
+			description: '新成立會組列表',
+			summary: '新成立會組列表',
+            params: {},
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.get('/group/serial/new-list', {schema}, async (req, res)=>{
+            if (req.session.is_login === false) {
+                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
+            }
+
+            
+            const {rows} = await Postgres.query<RoskaSerials>(`
+                SELECT * FROM roska_serials 
+                WHERE bid_start_time >= NOW()
+                ORDER BY sid ASC`);
+            return res.status(200).send(rows);
+        });
+    }
+    /** 進行中的會組列表 **/
+    {
+        const schema = {
+			description: '進行中的會組列表',
+			summary: '進行中的會組列表',
+            params: {},
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.get('/group/serial/on-list', {schema}, async (req, res)=>{
+            if (req.session.is_login === false) {
+                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
+            }
+            const {uid} = req.session.token!;
+            
+            const {rows} = await Postgres.query<RoskaSerials>(`
+                SELECT *
+                FROM roska_members m
+                INNER JOIN roska_serials s ON m.sid = s.sid
+                WHERE m.uid = $1 AND bid_start_time < NOW() AND bid_end_time > NOW()
+                ORDER BY m.sid;`, [uid]);
+            return res.status(200).send(rows);
+        });
+    }
+     /** 搜尋該會組會期 **/
+     {
+        const schema = {
+			description: '搜尋該會組會期',
+			summary: '搜尋該會組會期',
+            params: {
+                type: 'object',
+                properties:{
+                    sid: {type: 'string'}
+                }
+            },
+            security: [{ bearerAuth: [] }],
+		};
+
+        fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
+            const {uid} = req.session.token!;
+            if (uid === undefined) {
+                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
+            }
+
+            const {sid} = req.params;
+            const {rows} = await Postgres.query(`SELECT * FROM roska_groups WHERE sid=$1 ORDER BY gid ASC`, [sid]);
+
+            return res.status(200).send(rows);
+        });
+    }
     /** 各會期結算列表 **/
     {
         const schema = {
@@ -147,28 +219,6 @@ export = async function(fastify: FastifyInstance) {
 
 
             return res.status(200).send(user_transition_info);
-        });
-    }
-	/** 新成立會組列表 **/
-    {
-        const schema = {
-			description: '新成立會組列表',
-			summary: '新成立會組列表',
-            params: {},
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get('/group/serial/new-list', {schema}, async (req, res)=>{
-            if (req.session.is_login === false) {
-                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-            }
-
-            
-            const {rows} = await Postgres.query<RoskaSerials>(`
-                SELECT * FROM roska_serials 
-                WHERE bid_start_time >= NOW()
-                ORDER BY sid ASC`);
-            return res.status(200).send(rows);
         });
     }
     /** 已加入的會組 **/
