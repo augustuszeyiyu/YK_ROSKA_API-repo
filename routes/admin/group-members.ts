@@ -181,9 +181,10 @@ export = async function(fastify: FastifyInstance) {
                         const next = `${++last_index_member}`.padStart(2, '0');
                         const uid = USER.uid;
                         const mid = `${sid}-${next}`;
+                        const gid = `${sid}-t00`;
                         
                         const member_sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
-                        const detail_sql = PGDelegate.format(`INSERT INTO roska_details (mid, sid, uid) VALUES({mid}, {sid}, {uid}, {profit});`, {mid, sid, uid, profit:-roska_serial.basic_unit_amount});
+                        const detail_sql = PGDelegate.format(`INSERT INTO roska_details (mid, sid, uid, gid, profit) VALUES({mid}, {sid}, {uid}, {gid}, {profit});`, {mid, sid, uid, gid, profit:-roska_serial.basic_unit_amount});
                         insert_sql.push(member_sql);
                         insert_sql.push(detail_sql);
                     }
