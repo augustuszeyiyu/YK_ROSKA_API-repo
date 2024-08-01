@@ -179,15 +179,16 @@ export = async function(fastify: FastifyInstance) {
                     if (USER.contact_mobile_number === phone_number && remain_space > 0) {
                         --remain_space;
                         const next = `${++last_index_member}`.padStart(2, '0');
+                        const uid = USER.uid;
                         const mid = `${sid}-${next}`;
                         
-                        const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid:USER.uid});
-                        insert_sql.push(sql);
+                        const member_sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
+                        const detail_sql = PGDelegate.format(`INSERT INTO roska_details (mid, sid, uid) VALUES({mid}, {sid}, {uid}, {profit});`, {mid, sid, uid, profit:-roska_serial.basic_unit_amount});
+                        insert_sql.push(member_sql);
+                        insert_sql.push(detail_sql);
                     }
                 }                
-            }        
-            
-    
+            }
             await Postgres.query(insert_sql.join('\n '));
           
             
