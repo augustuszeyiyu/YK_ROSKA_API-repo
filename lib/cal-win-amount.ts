@@ -38,18 +38,18 @@ export function cal_win_amount(handle_fee:number, interest_bonus:number, trasfer
             }
         }
         case 2: {
-            if (T > 20) {
+            if (T < 20) {
                 return {
                     T,
-                    A: (base * T) + ((base-bid_amount) * remain) - (handle_fee * T) - (base * remain),
-                    transition: 2,
+                    A: (base * T) + ((base-bid_amount) * remain) - (handle_fee * T),
+                    transition: 0,
                 };
             }
             else {
                 return {
                     T,
-                    A: (base * T) + ((base-bid_amount) * remain) - (handle_fee * T),
-                    transition: 0,
+                    A: (base * T) + ((base-bid_amount) * remain) - (handle_fee * T) - (base * remain),
+                    transition: 2,
                 };
             }
         }
