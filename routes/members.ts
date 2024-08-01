@@ -266,12 +266,13 @@ export = async function(fastify: FastifyInstance) {
     //         }
     //         else {
     //             const update_promise:string[] = [];
-    //             const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, members_info.cycles, members_info.basic_unit_amount, 1000, members_info.gid, 1); 
+    //             const {T, A, transition} = cal_win_amount(handling_fee, interest_bonus, transition_fee, members_info.cycles, members_info.basic_unit_amount, 1000, members_info.gid, 1); 
+    //             const win_amount = A;
 
     //             const sql_1 = PGDelegate.format(`
     //                 UPDATE roska_members 
     //                 SET transition = {transition}, win_amount = {win_amount}, transit_to = {transit_to}
-    //                 WHERE sid={sid} AND mid = {mid};`, {sid: members_info.sid, mid, win_amount, transition:1, transit_to: members_info.header});
+    //                 WHERE sid={sid} AND mid = {mid};`, {sid: members_info.sid, mid, win_amount, transition, transit_to: members_info.header});
     //             update_promise.push(sql_1);
 
     //             const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {gid: members_info.gid, win_amount});

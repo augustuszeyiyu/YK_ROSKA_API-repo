@@ -53,7 +53,7 @@ export = async function(fastify: FastifyInstance) {
                                     WHEN rg.gid = m.gid THEN rg.win_amount
                                     WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
                                     WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                    ELSE (CASE WHEN m.transition = 1 THEN 0 ELSE -s.basic_unit_amount END) END)
+                                    ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
                             ) ORDER BY rg.gid, rg.sid)
                         FROM 
                             roska_groups rg
@@ -126,7 +126,7 @@ export = async function(fastify: FastifyInstance) {
                                         WHEN rg.gid = m.gid THEN rg.win_amount
                                         WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
                                         WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                        ELSE (CASE WHEN m.transition = 1 THEN 0 ELSE -s.basic_unit_amount END) END)
+                                        ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
                                 ) ORDER BY rg.gid, rg.sid)
                             FROM 
                                 roska_groups rg

@@ -13,6 +13,8 @@ phook.configure({durations:{UNHANDLED_ERROR:100}});
 
 import Postgres from "/data-source/postgres.js";
 import { PGDelegate } from "pgdelegate";
+import { cal_win_amount } from "/lib/cal-win-amount";
+import { SysVar } from "/data-type/sysvar";
 
 
 
@@ -26,6 +28,13 @@ import { PGDelegate } from "pgdelegate";
     const filePath = path.resolve(__dirname, '../../patches/', '1-10.csv');
     console.log(filePath);
     
+
+    // NOTE: query handling_fee, transition_fee, interest_bonus
+    const {rows:sysvar} = await Postgres.query<SysVar>(`SELECT * FROM sysvar WHERE key in ('handling_fee', 'interest_bonus', 'transition_fee') ORDER BY key ASC;`);            
+    const handling_fee = Number(sysvar[0].value);
+    const interest_bonus = Number(sysvar[1].value);
+    const transition_fee = Number(sysvar[2].value);
+
 
     // Create an empty array to store the CSV data
     const csvData:any = [];
@@ -89,7 +98,8 @@ import { PGDelegate } from "pgdelegate";
                         const format_date  = formatDate(new Date(`${year}-${month}-${day}`));
     
                         if (elm.name === user.name) {
-                            const win_amount = cal_win_amount(elm.base, elm.bid_amount, Number(elm.t), elm.transition);
+                            const {T, A, transition} = cal_win_amount(handle_fee, interest_bonus, transition_fee, 24, elm.base, elm.bid_amount, elm.t, elm.transition);
+                            const win_amount = A;
     
                             if (win_amount !== undefined && win_amount > 0) {                        
                                 const sql = PGDelegate.format(`
@@ -105,7 +115,7 @@ import { PGDelegate } from "pgdelegate";
                                     gid: elm.t !== ''? `${sid}-t${elm.t.padStart(2, '0')}`: ``, 
                                     win_amount,
                                     win_time: elm.bid_date !== ''? format_date: null,
-                                    transition: elm.transition !== ''? elm.transition: '0',
+                                    transition,
                                     transit_to: elm.transition === '1'? users[0].uid: '',
                                 });
                                 console.log(sql);
@@ -167,7 +177,8 @@ import { PGDelegate } from "pgdelegate";
                         const format_date  = formatDate(new Date(`${year}-${month}-${day}`));
     
                         if (elm.name === user.name) {
-                            const win_amount = cal_win_amount(elm.base, elm.bid_amount, Number(elm.t), elm.transition);
+                            const {T, A, transition} = cal_win_amount(handle_fee, interest_bonus, transition_fee, 24, elm.base, elm.bid_amount, elm.t, elm.transition);
+                            const win_amount = A;
                             
         
                             const sql = PGDelegate.format(`
@@ -183,7 +194,7 @@ import { PGDelegate } from "pgdelegate";
                                 gid: elm.t !== ''? `${sid}-t${elm.t.padStart(2, '0')}`: ``, 
                                 win_amount,
                                 win_time: elm.bid_date !== '' && elm.t !== ''? format_date: null,
-                                transition: elm.transition !== ''? elm.transition: '0',
+                                transition,
                                 transit_to: elm.transition === '1'? users[0].uid: '',
                             });
                             console.log(sql);                            
@@ -224,30 +235,6 @@ import { PGDelegate } from "pgdelegate";
     });
 
 
-
-    
-    function cal_win_amount(base:number, bid_amount:number, T:number, trasfer:string) {
-        const remain = cycles - T;
-
-        if (T >= 20)  trasfer = '0';
-
-        switch (trasfer) {
-            case '': {
-                return 0;
-            }
-            case '0': {
-                if (T < 20) {
-                    return (base * T) + ((base - bid_amount) * remain) - (handle_fee * T);
-                }
-                else {
-                    return (base * T) + ((base - bid_amount) * remain) - (handle_fee * T) - (base * remain);
-                }                
-            }
-            case '1': {
-                return (base-handle_fee)*T + Interest -trasfer_fee;
-            }
-        }
-    }
     function formatDate(date:Date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');

@@ -375,17 +375,17 @@ export = async function(fastify: FastifyInstance) {
                 WHERE m.mid = ANY($1);
             `, [mids]);
             
-
-            for (const {mid, gid, sid, cycles, basic_unit_amount, header} of members_info) {
-                const win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, cycles, Number(basic_unit_amount), 1000, gid, transition); 
+            for (const elm of members_info) {
+                const {T, A, transition} = cal_win_amount(handling_fee, interest_bonus, transition_fee, elm.cycles, Number(elm.basic_unit_amount), 1000, elm.gid, elm.transition); 
+                const win_amount = A;
                 
                 const sql_1 = PGDelegate.format(`
                     UPDATE roska_members 
                     SET transition = {transition}, win_amount = {win_amount}, transit_to = {transit_to}
-                    WHERE sid={sid} AND mid = {mid};`, {sid, mid, win_amount, transition, transit_to: header});
+                    WHERE sid={sid} AND mid = {mid};`, {sid:elm.sid, mid:elm.mid, win_amount, transition, transit_to: elm.header});
                 update_promise.push(sql_1);
 
-                const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {sid, gid, win_amount});
+                const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {sid:elm.sid, gid:elm.gid, win_amount});
                 update_promise.push(sql_2);
             }
             await Postgres.query(update_promise.join('\n '));  

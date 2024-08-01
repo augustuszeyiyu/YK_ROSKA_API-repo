@@ -187,7 +187,7 @@ export = async function(fastify: FastifyInstance) {
                                     WHEN rg.gid = m.gid THEN rg.win_amount
                                     WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
                                     WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                    ELSE (CASE WHEN m.transition = 1 THEN 0 ELSE -s.basic_unit_amount END) END)
+                                    ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
                             ) ORDER BY rg.gid, rg.sid)
                         FROM 
                             roska_groups rg
@@ -207,15 +207,18 @@ export = async function(fastify: FastifyInstance) {
 
             console.log(user_transition_info);
             
-            // Initialize Excel workbook and worksheet
+            // NOTE: Initialize Excel workbook and worksheet
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet(`會員開標付款紀錄表-${USER.name}`);
         
-            // Define columns
+            // NOTE: Define columns
             const columns = [
                 { header: '會員編號', key: 'mid', width: 20 },
-                { header: '姓名', key: 'name', width: 20 },
+                { header: '姓名',   key: 'name', width: 20 },
                 { header: '起會日', key: 'bid_start_time', width: 20 },
+                { header: '全收',   key: '_take_all_amount', width: 10 },
+                { header: '轉讓',   key: '_transition_amount', width: 10 },
+                { header: '實拿',   key: '_take_sub_amount', width: 10 },
             ];
 
             const data_list: any[] = [];
@@ -243,7 +246,21 @@ export = async function(fastify: FastifyInstance) {
 
                     if (Number(glm.win_amount) > 0) {
                         ++win;
-                        data[`_${glm.date}`] = elm.transition === 1? `轉讓 ${glm.win_amount}`: `${glm.win_amount}`;
+
+                        switch (elm.transition) {
+                            case 0:
+                                data['_take_all_amount'] = glm.win_amount;
+                                data[`_${glm.date}`] = glm.win_amount;
+                                break;
+                            case 1:
+                                data['_transition_amount'] = glm.win_amount;
+                                data[`_${glm.date}`] = glm.win_amount;
+                                break;
+                            case 2:
+                                data['_take_sub_amount'] = glm.win_amount;
+                                data[`_${glm.date}`] = glm.win_amount;
+                                break;
+                        }
                         isTransition = true;
                     }
                     else {
@@ -251,18 +268,31 @@ export = async function(fastify: FastifyInstance) {
                     }
                 }
                 
-                // console.log(data, columns);
-                data_list.push(data);                
+                // consol_e.log(data, columns);
+                data_list.push(data);
             }
 
-            data_list.push({
+
+            const footer = {
                 mid:    `總會數：${user_transition_info.length}`,
                 name:   `得標：${win}`,
                 bid_start_time:     `活會數：${user_transition_info.length-win}`,
-                [columns[4].key]:   ``
-            })
+                [columns[4].key]:   ``,
+            }
+
+            // NOTE: Calculate sums for each column
+            for (const col of columns) {
+                if (col.key && col.key.startsWith('_')) {
+                    const sum = data_list.reduce((acc, row) => acc + (row[col.key] || 0), 0 );
+                    footer[col.key] = sum;
+                }
+            }
+
+
+
+            data_list.push(footer)
             worksheet.columns = columns;
-            worksheet.addRows(data_list);
+            worksheet.addRows(data_list);            
 
 
             // NOTE: Add borders to the header row

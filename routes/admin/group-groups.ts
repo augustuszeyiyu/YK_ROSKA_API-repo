@@ -76,7 +76,7 @@ export = async function(fastify: FastifyInstance) {
                                         WHEN rg.gid = m.gid THEN rg.win_amount
                                         WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
                                         WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                        ELSE (CASE WHEN m.transition = 1 THEN 0 ELSE -s.basic_unit_amount END) END)
+                                        ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
                                 ) ORDER BY rg.gid, rg.sid)
                             FROM 
                                 roska_groups rg
@@ -535,8 +535,10 @@ export = async function(fastify: FastifyInstance) {
                 winner_candidate = candidate[winner_index];
             }
             
-            winner_candidate.win_amount = cal_win_amount(handling_fee, interest_bonus, transition_fee, group_info.cycles!, group_info.basic_unit_amount!, winner_candidate.bid_amount, gid, winner_candidate.transition);           
-            console.log({winner_index, winner_candidate});            
+            const {T, A, transition} = cal_win_amount(handling_fee, interest_bonus, transition_fee, group_info.cycles!, group_info.basic_unit_amount!, winner_candidate.bid_amount, gid, winner_candidate.transition);
+            winner_candidate.win_amount = A;
+            winner_candidate.transition = transition;
+            console.log({winner_index, winner_candidate});
 
             
             {
@@ -562,9 +564,7 @@ export = async function(fastify: FastifyInstance) {
             }
 
             // NOTE: updaet roska_bids
-            {
-                console.log('HERE');
-                
+            {                
                 const sql = PGDelegate.format(`
                     UPDATE  
                         roska_bids 
@@ -674,7 +674,8 @@ export = async function(fastify: FastifyInstance) {
                         SET     
                             gid = {gid},
                             win_amount = {win_amount},
-                            win_time = NOW()
+                            win_time = NOW(),
+                            transition = {transition}
                         WHERE   
                             mid = {mid} AND
                             uid = {uid} AND
@@ -970,7 +971,10 @@ export = async function(fastify: FastifyInstance) {
                 } // for end
 
                 {
-                    const total_earn = cal_win_amount(handling_fee, transition_fee, interest_bonus, group_info.cycles, group_info.basic_unit_amount, group_info.bid_amount, gid, winner_candidate.transition);
+                    const {T, A, transition} = cal_win_amount(handling_fee, transition_fee, interest_bonus, group_info.cycles, group_info.basic_unit_amount, group_info.bid_amount, gid, winner_candidate.transition);
+                    const total_earn = A;
+                    winner_candidate.win_amount = A;
+                    winner_candidate.transition = transition;
                     // NOTE: 更新得標者資料
                     const detail = {
                         sid, gid,
@@ -997,6 +1001,7 @@ export = async function(fastify: FastifyInstance) {
                         SET     gid = {gid},
                                 win_amount = {win_amount},
                                 win_time = NOW(),
+                                transition = {transition}
                         WHERE   mid = {mid}
                             AND uid = {uid}
                             AND sid = {sid}
