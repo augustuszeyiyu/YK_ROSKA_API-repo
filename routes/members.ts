@@ -147,80 +147,30 @@ export = async function(fastify: FastifyInstance) {
     }
     /** 已加入的會組 **/
     {
-        const schema = {
-			description: '已加入的會組',
-			summary: '已加入的會組',
-            params: {},
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get('/group/serial/on-list', {schema}, async (req, res)=>{
-            if (req.session.is_login === false) {
-                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-            }
-            
-            const {uid} = req.session.token!;
-            const {rows} = await Postgres.query<RoskaSerials>(`
-                SELECT m.mid, m.create_time as join_time, s.* 
-                FROM roska_members m
-                INNER JOIN roska_serials s ON m.sid = s.sid
-                WHERE m.uid=$1
-                ORDER BY m.mid ASC, m.sid ASC;`, [uid]);
-
-            return res.status(200).send(rows);
-        });
-    }
-    /** 加入會組 **/
-    {
-        const schema = {
-			description: '加入會組',
-			summary: '加入會組',
-            params: {
-                type: 'object',
-				properties: {
-                    sid: { type: 'string' }
-                },
-            },
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.post<{Params:{sid:RoskaSerials['sid']}}>('/group/member/:sid', {schema}, async (req, res)=>{
-            const {uid}:{uid:User['uid']} = req.session.token!;
-
-            const {sid} = req.params;
-
-
-            const {rows: [roska_serial]} = await Postgres.query<RoskaSerials>(`SELECT * FROM roska_serials WHERE sid=$1;`, [sid]);
-            if (roska_serial === undefined) {
-                return res.errorHandler(GroupError.SID_NOT_FOUND);
-            }
-
-
-            const {rows: [member_count]} = await Postgres.query<{count:num_str}>(`
-                SELECT COALESCE(COUNT(m.mid), 0) AS count
-                FROM roska_members m
-                LEFT JOIN roska_serials s ON m.sid = s.sid
-                WHERE m.sid = $1;`, [sid]);
-            
-            
-            const total_members = Number(member_count.count);
-            if (roska_serial.member_count === total_members) {
-                return res.errorHandler(GroupError.GROUP_SERIAL_IS_FULL);
-            }
-
-            const next = `${total_members}`.padStart(2, '0');
-            const mid = `${sid}-${next}`;
-           
-            const sql = PGDelegate.format(`INSERT INTO roska_members (mid, sid, uid) VALUES({mid}, {sid}, {uid});`, {mid, sid, uid});
+            const schema = {
+                description: '已加入的會組',
+                summary: '已加入的會組',
+                params: {},
+                security: [{ bearerAuth: [] }],
+            };
     
-            await Postgres.query(sql);
-
-          
-            
-			res.status(200).send({});
-		});
+            fastify.get('/group/serial/join-list', {schema}, async (req, res)=>{
+                if (req.session.is_login === false) {
+                    res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
+                }
+                
+                const {uid} = req.session.token!;
+                const {rows} = await Postgres.query<RoskaSerials>(`
+                    SELECT m.mid, m.create_time, s.* 
+                    FROM roska_members m
+                    INNER JOIN roska_serials s ON m.sid = s.sid
+                    WHERE m.uid=$1
+                    ORDER BY m.mid ASC, m.sid ASC;`, [uid]);
+    
+                return res.status(200).send(rows);
+            });
     }
-
+    /** 搜尋該團下的成員 **/
     {
         const schema = {
 			description: '搜尋該團下的成員',

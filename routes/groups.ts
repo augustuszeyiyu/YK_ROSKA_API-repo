@@ -47,16 +47,16 @@ export = async function(fastify: FastifyInstance) {
             const {uid} = req.session.token!;
             
             const {rows} = await Postgres.query<RoskaSerials>(`
-                SELECT *
+                SELECT DISTINCT s.sid, s.*
                 FROM roska_members m
                 INNER JOIN roska_serials s ON m.sid = s.sid
                 WHERE m.uid = $1 AND bid_start_time < NOW() AND bid_end_time > NOW()
-                ORDER BY m.sid;`, [uid]);
+                ORDER BY s.sid;`, [uid]);
             return res.status(200).send(rows);
         });
     }
-     /** 搜尋該會組會期 **/
-     {
+    /** 搜尋該會組會期 **/
+    {
         const schema = {
 			description: '搜尋該會組會期',
 			summary: '搜尋該會組會期',
@@ -70,10 +70,11 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         fastify.get<{Params:{sid:RoskaGroups['sid']}}>('/group/group/:sid', {schema}, async (req, res)=>{
-            const {uid} = req.session.token!;
-            if (uid === undefined) {
+            if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
+            const {uid} = req.session.token!;
+            
 
             const {sid} = req.params;
             const {rows} = await Postgres.query(`SELECT * FROM roska_groups WHERE sid=$1 ORDER BY gid ASC`, [sid]);
@@ -221,32 +222,6 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(user_transition_info);
         });
     }
-    /** 已加入的會組 **/
-    {
-        const schema = {
-			description: '已加入的會組',
-			summary: '已加入的會組',
-            params: {},
-            security: [{ bearerAuth: [] }],
-		};
-
-        fastify.get('/group/serial/on-list', {schema}, async (req, res)=>{
-            if (req.session.is_login === false) {
-                res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
-            }
-            
-            const {uid} = req.session.token!;
-            const {rows} = await Postgres.query<RoskaSerials>(`
-                SELECT m.mid, m.create_time as join_time, s.* 
-                FROM roska_members m
-                INNER JOIN roska_serials s ON m.sid = s.sid
-                WHERE m.uid=$1
-                ORDER BY m.mid ASC, m.sid ASC;`, [uid]);
-
-            return res.status(200).send(rows);
-        });
-    }
-
     /** 搜尋該會組會期 **/
     {
         const schema = {
