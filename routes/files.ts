@@ -210,6 +210,8 @@ export = async function(fastify: FastifyInstance) {
             // NOTE: Initialize Excel workbook and worksheet
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet(`會員開標付款紀錄表-${USER.name}`);
+            worksheet.views = [{ state: 'frozen', ySplit: 1, xSplit: 6 }];
+
         
             // NOTE: Define columns
             const columns = [
@@ -287,10 +289,23 @@ export = async function(fastify: FastifyInstance) {
                     footer[col.key] = sum;
                 }
             }
+            data_list.push(footer);
 
 
+            let payable_fees = 0;
+            for (const key in footer) {
+                const value = footer[key];
+                if (key.startsWith('_') && ['_take_all_amount', '_transition_amount', '_take_sub_amount'].includes(key) === false) {
+                    payable_fees += Number(value);
+                }
+            }
+            const footer_sum = {
+                mid:    `應繳費用`,
+                name:   payable_fees,
+            }
+            data_list.push(footer_sum);
 
-            data_list.push(footer)
+            
             worksheet.columns = columns;
             worksheet.addRows(data_list);            
 
@@ -317,9 +332,21 @@ export = async function(fastify: FastifyInstance) {
                     };
                 });
             });
-            const footerRow = worksheet.lastRow;
+            const footerRow = worksheet.getRow(worksheet.rowCount-1);
             if (footerRow) {
                 footerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    cell.border = {
+                        top: { style: 'thick' },
+                        left: { style: 'thick' },
+                        bottom: { style: 'thick' },
+                        right: { style: 'thick' }
+                    };
+                    cell.font = { bold: true };
+                });
+            }
+            const footerSumRow = worksheet.lastRow;
+            if (footerSumRow) {
+                footerSumRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                     cell.border = {
                         top: { style: 'thick' },
                         left: { style: 'thick' },
