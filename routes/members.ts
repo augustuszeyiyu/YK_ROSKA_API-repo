@@ -161,7 +161,7 @@ export = async function(fastify: FastifyInstance) {
                 
                 const {uid} = req.session.token!;
                 const {rows} = await Postgres.query<RoskaSerials>(`
-                    SELECT m.mid, m.create_time, s.* 
+                    SELECT m.*
                     FROM roska_members m
                     INNER JOIN roska_serials s ON m.sid = s.sid
                     WHERE m.uid=$1
