@@ -426,9 +426,9 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-		fastify.get<{Params:{uid:RoskaMembers['uid']}}>('/admin/file/member-pay-record/:uid', {schema}, async (req, res) => {
+		fastify.get<{Params:{uid:RoskaMembers['uid']}}>('/file/member-pay-record/:uid', {schema}, async (req, res) => {
             const {uid} = req.params!;
-            
+
             const {rows:[USER]} = await Postgres.query<User>(`SELECT * FROM users WHERE uid = $1`, [uid]);
 
             const {rows:user_transition_info} = await Postgres.query<{
