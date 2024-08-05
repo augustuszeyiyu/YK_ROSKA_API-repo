@@ -15,6 +15,84 @@ import { cal_win_amount } from "/lib/cal-win-amount";
 
 
 export = async function(fastify: FastifyInstance) {
+
+ /** 各會期結算列表 **/
+    {
+        const schema_params = {
+            type: 'object',
+            properties: {
+                uid: { type: "string" }
+            }
+        };
+        const schema = {
+            description: '各會期結算列表',
+            summary: '各會期結算列表',
+            params: schema_params,
+            security: [{ bearerAuth: [] }],
+        };
+        const PayloadValidator1 = $.ajv.compile(schema_params);
+        fastify.get<{Params:{uid:string}}>('/group/group/settlement-list/:uid', {schema}, async (req, res)=>{
+            if ( !PayloadValidator1(req.params) ) {
+                return res.status(400).send({
+                    scope:req.routerPath,
+                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                    msg: "Request payload is invalid!",
+                    detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+                });
+            }
+
+            const { uid }  = req.params!;
+            console.log(uid);
+            
+            const {rows:user_transition_info} = await Postgres.query<{
+                sid:RoskaMembers['sid'], 
+                basic_unit_amount: RoskaSerials['basic_unit_amount'],
+                cycles:RoskaSerials['cycles'],
+                transition:RoskaMembers['transition'], 
+                transit_to:RoskaMembers['transit_to'],
+                total: number,
+                group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
+            }>(`
+                SELECT DISTINCT 
+                m.mid,
+                m.uid,
+                m.sid,
+                s.basic_unit_amount,
+                s.cycles,
+                s.bid_start_time,
+                m.transition,
+                m.transit_to,
+                COALESCE(
+                    (
+                        SELECT
+                            jsonb_agg( jsonb_build_object(
+                                'gid', rg.gid, 
+                                'win_amount', (CASE 
+                                    WHEN rg.gid = m.gid THEN rg.win_amount
+                                    WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+                                    WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+                                    ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
+                            ) ORDER BY rg.gid, rg.sid)
+                        FROM 
+                            roska_groups rg
+                        WHERE 
+                            rg.sid = m.sid AND 
+                            rg.mid <> ''
+                    ), '[]'::jsonb) AS group_info
+                FROM 
+                    roska_members m
+                INNER JOIN 
+                    roska_serials s ON m.sid=s.sid
+                WHERE 
+                    m.mid IN (SELECT mid FROM roska_members WHERE uid = $1)
+                ORDER BY 
+                    m.sid;`, [uid]);
+
+
+            return res.status(200).send(user_transition_info);
+        });
+    }
+
     /** admin各會期結算 **/
     {
         const schema_params = {
