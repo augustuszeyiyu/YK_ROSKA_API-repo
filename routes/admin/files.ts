@@ -413,8 +413,7 @@ export = async function(fastify: FastifyInstance) {
     //         res.status(200).send({ url: `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}` });
     //     });
     }
-
-
+    
     {
         const schema = {
 			description: '會員開標付款紀錄表',
