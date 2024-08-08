@@ -149,7 +149,6 @@ export = async function(fastify: FastifyInstance) {
                             SELECT
                                 jsonb_agg( jsonb_build_object(
                                     'gid', rg.gid, 
-                                    'bid_amount', rg.bid_amount,
                                     'win_amount', (CASE 
                                         WHEN rg.gid = m.gid THEN rg.win_amount
                                         WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)

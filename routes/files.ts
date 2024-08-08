@@ -219,6 +219,7 @@ export = async function(fastify: FastifyInstance) {
                 { header: '姓名',   key: 'name', width: 20 },
                 { header: '起會日', key: 'bid_start_time', width: 20 },
                 { header: '全收',   key: '_take_all_amount', width: 10 },
+                { header: '負債',   key: '_debt', width: 10 },
                 { header: '轉讓',   key: '_transition_amount', width: 10 },
                 { header: '實拿',   key: '_take_sub_amount', width: 10 },
             ];
@@ -253,6 +254,8 @@ export = async function(fastify: FastifyInstance) {
                             case 0:
                                 data['_take_all_amount'] = glm.win_amount;
                                 data[`_${glm.date}`] = glm.win_amount;
+
+                                data['_debt'] = (25 - Number(glm.gid!.substring(15))) * 5000;
                                 break;
                             case 1:
                                 data['_transition_amount'] = glm.win_amount;
