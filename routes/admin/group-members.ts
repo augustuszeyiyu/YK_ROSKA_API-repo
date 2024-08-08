@@ -355,10 +355,10 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         fastify.post<{Body:{mids:RoskaMembers['mid'][], transition:RoskaMembers['transition']}}>('/group/member/transition', {schema}, async (req, res)=>{
-            const {mids, transition} = req.body;
+            const {mids, transition:transition_after} = req.body;
             
-            if ([0, 1].includes(transition) === false) {
-                return res.errorHandler(BaseError.BAD_REQUEST, {transition})
+            if ([0, 1].includes(transition_after) === false) {
+                return res.errorHandler(BaseError.BAD_REQUEST, {transition_after})
             }
 
 
@@ -378,13 +378,15 @@ export = async function(fastify: FastifyInstance) {
             `, [mids]);
             
             for (const elm of members_info) {
-                const {T, A, transition} = cal_win_amount(handling_fee, interest_bonus, transition_fee, elm.cycles, Number(elm.basic_unit_amount), 1000, elm.gid, elm.transition); 
+                const {T, A, transition} = cal_win_amount(handling_fee, interest_bonus, transition_fee, elm.cycles, Number(elm.basic_unit_amount), 1000, elm.gid, transition_after); 
                 const win_amount = A;
+                
+                console.log({T, A, transition});
                 
                 const sql_1 = PGDelegate.format(`
                     UPDATE roska_members 
                     SET transition = {transition}, win_amount = {win_amount}, transit_to = {transit_to}
-                    WHERE sid={sid} AND mid = {mid};`, {sid:elm.sid, mid:elm.mid, win_amount, transition, transit_to: elm.header});
+                    WHERE sid={sid} AND mid = {mid};`, {sid:elm.sid, mid:elm.mid, win_amount, transition:transition_after, transit_to: elm.header});
                 update_promise.push(sql_1);
 
                 const sql_2 = PGDelegate.format(`UPDATE roska_groups SET win_amount = {win_amount} WHERE sid = {sid} AND gid = {gid};`, {sid:elm.sid, gid:elm.gid, win_amount});
