@@ -205,7 +205,7 @@ export = async function(fastify: FastifyInstance) {
                     m.sid;`, [uid]);
 
 
-            console.log(user_transition_info);
+            // console.log(user_transition_info);
             
             // NOTE: Initialize Excel workbook and worksheet
             const workbook = new ExcelJS.Workbook();
@@ -391,8 +391,7 @@ export = async function(fastify: FastifyInstance) {
             await Postgres.query(sql);
 
             const url = `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`;
-            console.log(url, uploadDir, path.resolve(uploadDir, newFilename));
-            
+            // console.log(url, uploadDir, path.resolve(uploadDir, newFilename));            
 
             // NOTE: Serve the file for download
             res.status(200).send({url});
