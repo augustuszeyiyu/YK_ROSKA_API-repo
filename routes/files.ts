@@ -302,11 +302,11 @@ export = async function(fastify: FastifyInstance) {
                     payable_fees += Number(value);
                 }
             }
-            const footer_sum = {
-                mid:    `應繳費用`,
-                name:   payable_fees,
-            }
-            data_list.push(footer_sum);
+            // const footer_sum = {
+            //     mid:    `應繳費用`,
+            //     name:   payable_fees,
+            // }
+            // data_list.push(footer_sum);
 
             
             worksheet.columns = columns;
