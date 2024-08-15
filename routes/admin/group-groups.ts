@@ -114,7 +114,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
         };
         const PayloadValidator1 = $.ajv.compile(schema_params);
-        fastify.get<{Params:{uid:string, year:number, month:number}}>('/group/group/serial/settlement/:uid/ :year/ :month', {schema}, async (req, res)=>{
+        fastify.get<{Params:{uid:string, year:number, month:number}}>('/group/group/serial/settlement/:uid/:year/:month', {schema}, async (req, res)=>{
             if ( !PayloadValidator1(req.params) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
