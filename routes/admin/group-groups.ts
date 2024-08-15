@@ -67,6 +67,9 @@ export = async function(fastify: FastifyInstance) {
                         SELECT
                             jsonb_agg( jsonb_build_object(
                                 'gid', rg.gid, 
+                                'mid', rg.mid,
+								'uid', rg.uid,
+								'bid_end_time', rg.bid_end_time,
                                 'win_amount', (CASE 
                                     WHEN rg.gid = m.gid THEN rg.win_amount
                                     WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
@@ -148,7 +151,10 @@ export = async function(fastify: FastifyInstance) {
                         (
                             SELECT
                                 jsonb_agg( jsonb_build_object(
-                                    'gid', rg.gid, 
+                                    'gid', rg.gid,
+                                    'mid', rg.mid,
+								    'uid', rg.uid,
+								    'bid_end_time', rg.bid_end_time,
                                     'win_amount', (CASE 
                                         WHEN rg.gid = m.gid THEN rg.win_amount
                                         WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
@@ -160,8 +166,8 @@ export = async function(fastify: FastifyInstance) {
                             WHERE 
                                 rg.sid = m.sid AND 
                                 rg.mid <> '' AND 
-                                EXTRACT(YEAR FROM win_time) <= $2 AND
-                                EXTRACT(MONTH FROM win_time) <= $3
+                                EXTRACT(YEAR FROM bid_end_time) <= $2 AND
+                                EXTRACT(MONTH FROM bid_end_time) <= $3
                         ), '[]'::jsonb) AS group_info
                 FROM 
                     roska_members m
