@@ -403,7 +403,7 @@ export = async function(fastify: FastifyInstance) {
 
             
             let sql_count = `
-                SWITH fiter_roska_groups AS (
+                WITH fiter_roska_groups AS (
                     SELECT s.*, (
                         SELECT (CASE WHEN g.mid <> '' THEN true ELSE false END) expired
                         FROM roska_groups g
@@ -417,7 +417,7 @@ export = async function(fastify: FastifyInstance) {
                 WHERE expired = true 
                 ORDER BY sid ${_order} `;
             let sql = `
-                SWITH fiter_roska_groups AS (
+                WITH fiter_roska_groups AS (
                     SELECT s.*, (
                         SELECT (CASE WHEN g.mid <> '' THEN true ELSE false END) expired
                         FROM roska_groups g
