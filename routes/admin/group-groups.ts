@@ -95,8 +95,94 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(user_transition_info);
         });
     }
+    /** admin 所有會員針對會期時間段結算 **/
+    {
+        const schema_params = {
+            type: 'object',
+            properties: {
+                year: { type: 'number' },
+                month: { type: 'number' }
+            },
 
-    /** admin各會期結算 **/
+        };
+        const schema = {
+            description: 'admin 所有會員針對會期時間段結算',
+            summary: 'admin 所有會員針對會期時間段結算',
+            params: schema_params,
+            security: [{ bearerAuth: [] }],
+        };
+        const PayloadValidator1 = $.ajv.compile(schema_params);
+        fastify.get<{Params:{uid:string, year:number, month:number}}>('/group/group/serial/settlement/:year/:month', {schema}, async (req, res)=>{
+            if ( !PayloadValidator1(req.params) ) {
+                return res.status(400).send({
+                    scope:req.routerPath,
+                    code: ErrorCode.INVALID_REQUEST_PAYLOAD,
+                    msg: "Request payload is invalid!",
+                    detail: PayloadValidator1.errors!.map(e=>`${e.instancePath||'Payload'} ${e.message!}`)
+                });
+            }
+            const {uid, year, month} = req.params!;
+            console.log(req.params);
+            console.log({uid, year, month});
+
+
+            const {rows:user_transition_info} = await Postgres.query<{
+                sid:RoskaMembers['sid'], 
+                mid:RoskaMembers['mid'], 
+                basic_unit_amount: RoskaSerials['basic_unit_amount'],
+                cycles:RoskaSerials['cycles'],
+                current_cycles:number,
+                transition:RoskaMembers['transition'], 
+                transit_to:RoskaMembers['transit_to'],
+                total: number,
+                group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
+            }>(`
+                WITH filter_group_info AS (
+                    SELECT DISTINCT 
+                        m.mid,
+                        m.uid,
+                        m.sid, 
+                        s.basic_unit_amount,
+                        s.cycles,
+                        m.transition,
+                        m.transit_to,
+                        COALESCE(
+                            (
+                                SELECT
+                                    jsonb_agg( jsonb_build_object(
+                                        'gid', rg.gid,
+                                        'mid', rg.mid,
+                                        'uid', rg.uid,
+                                        'bid_end_time', rg.bid_end_time,
+                                        'win_amount', (CASE 
+                                            WHEN rg.gid = m.gid THEN rg.win_amount
+                                            WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+                                            WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+                                            ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
+                                    ) ORDER BY rg.gid, rg.sid)
+                                FROM 
+                                    roska_groups rg
+                                WHERE 
+                                    rg.sid = m.sid AND 
+                                    rg.mid <> '' AND 
+                                    EXTRACT(YEAR FROM bid_end_time) <= $1 AND
+                                    EXTRACT(MONTH FROM bid_end_time) <= $2
+                            ), '[]'::jsonb) AS group_info
+                    FROM 
+                        roska_members m
+                    INNER JOIN 
+                        roska_serials s ON m.sid=s.sid
+                    ORDER BY 
+                        m.sid
+                        )
+                    select * from filter_group_info
+                    where jsonb_array_length(group_info) > 0;`, [year, month]);
+
+
+            return res.status(200).send(user_transition_info);
+        });
+    }
+    /** admin 某會員針對會期時間段結算 **/
     {
         const schema_params = {
             type: 'object',
@@ -108,8 +194,8 @@ export = async function(fastify: FastifyInstance) {
 
         };
         const schema = {
-            description: 'admin各會期結算',
-            summary: 'admin各會期結算',
+            description: 'admin 某會員針對會期時間段結算',
+            summary: 'admin 某會員針對會期時間段結算',
             params: schema_params,
             security: [{ bearerAuth: [] }],
         };
@@ -186,7 +272,7 @@ export = async function(fastify: FastifyInstance) {
             return res.status(200).send(user_transition_info);
         });
     }
-     /** 產會期編號 **/
+    /** 產會期編號 **/
 	{
         const schema_params = {
             type: 'object',
