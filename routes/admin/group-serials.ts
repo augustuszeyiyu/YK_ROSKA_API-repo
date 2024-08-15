@@ -385,7 +385,7 @@ export = async function(fastify: FastifyInstance) {
 		};
 
         const PayloadValidator = $.ajv.compile(schema_query);
-        fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/past-list', {schema}, async (req, res)=>{
+        fastify.get<{Querystring:{o:'ASC'|'DESC', p:string, ps:string}}>('/group/serial/expired-list', {schema}, async (req, res)=>{
             if ( !PayloadValidator(req.query) ) {
                 return res.status(400).send({
                     scope:req.routerPath,
