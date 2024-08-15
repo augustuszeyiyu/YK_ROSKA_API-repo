@@ -174,7 +174,7 @@ export = async function(fastify: FastifyInstance) {
                         roska_serials s ON m.sid=s.sid
                     ORDER BY 
                         m.sid
-                        )
+                    )
                     select * from filter_group_info
                     where jsonb_array_length(group_info) > 0;`, [year, month]);
 
@@ -264,7 +264,7 @@ export = async function(fastify: FastifyInstance) {
                         m.uid = $1
                     ORDER BY 
                         m.sid
-                        )
+                    )
                     select * from filter_group_info
                     where jsonb_array_length(group_info) > 0;`, [uid, year, month]);
 
