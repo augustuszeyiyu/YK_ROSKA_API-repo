@@ -456,9 +456,274 @@ export = async function(fastify: FastifyInstance) {
     }
     /** GET　/api/admin/file/member-pay-record **/
     {
+        const schema_params = {
+            type: 'object',
+            properties: {
+                uid:{type: "string"},
+            } 
+        };
         const schema = {
 			description: '會員開標付款紀錄表',
 			summary: '會員開標付款紀錄表',
+            params:schema_params,
+            security: [{ bearerAuth: [] }],
+		};
+
+		fastify.get<{Params:{uid:RoskaMembers['uid']}}>('/file/member-pay-record/:uid', {schema}, async (req, res) => {
+            // const {uid} = req.session.token!;
+            const {uid}= req.params;
+            console.log(req.params);
+            console.log(uid);
+
+            const {rows:[USER]} = await Postgres.query<User>(`SELECT * FROM users WHERE uid = $1`, [uid]);
+
+            const {rows:user_transition_info} = await Postgres.query<{
+                sid:RoskaMembers['sid'], 
+                mid:RoskaMembers['mid'],
+                basic_unit_amount: RoskaSerials['basic_unit_amount'],
+                cycles:RoskaSerials['cycles'],
+                transition:RoskaMembers['transition'], 
+                transit_to:RoskaMembers['transit_to'],
+                total: number,
+                group_info: (Partial<RoskaGroups>&{session:Number, date:string})[],
+            }>(`
+                SELECT DISTINCT 
+                m.mid,
+                m.uid,
+                m.sid, 
+                s.basic_unit_amount,
+                s.cycles,
+                s.bid_start_time,
+                m.transition,
+                m.transit_to,
+                COALESCE(
+                    (
+                        SELECT
+                            jsonb_agg( jsonb_build_object(
+                                'gid', rg.gid,
+                                'session', CAST(Right(rg.gid, 2) AS INTEGER),
+                                'bid_start_time', rg.bid_start_time,
+                                'date', extract(year from rg.bid_start_time)-1911||'-'||extract(month from rg.bid_start_time),
+                                'win_amount', (CASE 
+                                    WHEN rg.gid = m.gid THEN rg.win_amount
+                                    WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+                                    WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+                                    ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
+                            ) ORDER BY rg.gid, rg.sid)
+                        FROM 
+                            roska_groups rg
+                        WHERE 
+                            rg.sid = m.sid AND 
+                            rg.mid <> ''
+                    ), '[]'::jsonb) AS group_info
+                FROM 
+                    roska_members m
+                INNER JOIN 
+                    roska_serials s ON m.sid=s.sid
+                WHERE 
+                    m.mid IN (SELECT mid FROM roska_members WHERE uid = $1)
+                ORDER BY 
+                    m.sid;`, [uid]);
+
+
+            // console.log(user_transition_info);
+            
+            // NOTE: Initialize Excel workbook and worksheet
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet(`會員開標付款紀錄表-${USER.name}`);
+            worksheet.views = [{ state: 'frozen', ySplit: 1, xSplit: 6 }];
+
+        
+            // NOTE: Define columns
+            const columns = [
+                { header: '會員編號', key: 'mid', width: 20 },
+                { header: '姓名',   key: 'name', width: 20 },
+                { header: '起會日', key: 'bid_start_time', width: 20 },
+                { header: '全收',   key: '_take_all_amount', width: 10 },
+                { header: '負債',   key: '_debt', width: 10 },
+                { header: '轉讓',   key: '_transition_amount', width: 10 },
+                { header: '實拿',   key: '_take_sub_amount', width: 10 },
+            ];
+
+            const data_list: any[] = [];
+            let   win = 0;
+
+            for (let uindex = 0; uindex < user_transition_info.length; uindex++) {
+                const elm = user_transition_info[uindex];
+        
+                const data = {
+                    mid: elm.mid,
+                    name: `${USER.name} ${(uindex+1).toString().padStart(4, '0')}`,
+                    bid_start_time: elm.group_info[0]?.date // Ensure group_info[0] exists
+                };
+
+                let isTransition = false;
+                for (let index = 0; index < elm.group_info.length; index++) {
+
+                    const glm = elm.group_info[index];
+                    const find = columns.find(elm => elm.key === `_${glm.date}`);
+                    
+                    if (!find) {
+                        columns.push({ header: `${glm.date}`, key: `_${glm.date}`, width: 15 });
+                    }
+                    
+
+                    if (Number(glm.win_amount) > 0) {
+                        ++win;
+
+                        switch (elm.transition) {
+                            case 0:
+                                data['_take_all_amount'] = glm.win_amount;
+                                data[`_${glm.date}`] = glm.win_amount;
+
+                                data['_debt'] = (25 - Number(glm.gid!.substring(15))) * 5000;
+                                break;
+                            case 1:
+                                data['_transition_amount'] = glm.win_amount;
+                                data[`_${glm.date}`] = glm.win_amount;
+                                break;
+                            case 2:
+                                data['_take_sub_amount'] = glm.win_amount;
+                                data[`_${glm.date}`] = glm.win_amount;
+                                break;
+                        }
+                        isTransition = true;
+                    }
+                    else {
+                        data[`_${glm.date}`] = glm.win_amount;
+                    }
+                }
+                
+                // consol_e.log(data, columns);
+                data_list.push(data);
+            }
+
+
+            const footer = {
+                mid:    `總會數：${user_transition_info.length}`,
+                name:   `得標：${win}`,
+                bid_start_time:     `活會數：${user_transition_info.length-win}`,
+                [columns[4].key]:   ``,
+            }
+
+            // NOTE: Calculate sums for each column
+            for (const col of columns) {
+                if (col.key && col.key.startsWith('_')) {
+                    const sum = data_list.reduce((acc, row) => acc + (row[col.key] || 0), 0 );
+                    footer[col.key] = sum;
+                }
+            }
+            data_list.push(footer);
+
+
+            let payable_fees = 0;
+            for (const key in footer) {
+                const value = footer[key];
+                if (key.startsWith('_') && ['_take_all_amount', '_transition_amount', '_take_sub_amount'].includes(key) === false) {
+                    payable_fees += Number(value);
+                }
+            }
+            // const footer_sum = {
+            //     mid:    `應繳費用`,
+            //     name:   payable_fees,
+            // }
+            // data_list.push(footer_sum);
+
+            
+            worksheet.columns = columns;
+            worksheet.addRows(data_list);            
+
+
+            // NOTE: Add borders to the header row
+            const headerRow = worksheet.getRow(1);
+            headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                cell.border = {
+                    top: { style: 'thick' },
+                    left: { style: 'thick' },
+                    bottom: { style: 'thick' },
+                    right: { style: 'thick' }
+                },
+                cell.font = { bold: true };
+            });
+            // NOTE: Add borders to the entire worksheet
+            worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+                row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            });
+            const footerRow = worksheet.getRow(worksheet.rowCount-1);
+            if (footerRow) {
+                footerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    cell.border = {
+                        top: { style: 'thick' },
+                        left: { style: 'thick' },
+                        bottom: { style: 'thick' },
+                        right: { style: 'thick' }
+                    };
+                    cell.font = { bold: true };
+                });
+            }
+            const footerSumRow = worksheet.lastRow;
+            if (footerSumRow) {
+                footerSumRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    cell.border = {
+                        top: { style: 'thick' },
+                        left: { style: 'thick' },
+                        bottom: { style: 'thick' },
+                        right: { style: 'thick' }
+                    };
+                    cell.font = { bold: true };
+                });
+            }
+
+            // Check if file exists or not
+            const uploadDir = Config.storage_root;
+            const newFilename = `user-payment-report-${USER.contact_mobile_number}.xlsx`;
+            const newFilePath = path.resolve(uploadDir, newFilename);
+
+            // Delete existing file if it exists
+            await Postgres.query(`DELETE FROM files WHERE file_path = $1`, [newFilePath]);
+
+            // Save the workbook to a file
+            await workbook.xlsx.writeFile(newFilePath);
+            console.log('Excel file created successfully.');
+
+            // Insert file record into database
+            const insert_data = {
+                fid: TrimId.NEW.toString(32),
+                uid,
+                file_path: newFilePath,
+                file_name: newFilename,
+                encoding: 'OpenXML format',
+                mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                url: `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`
+            };
+
+            const sql = PGDelegate.format(`
+                INSERT INTO files (fid, uid, file_path, file_name, encoding, mimetype, url)
+                VALUES ({fid}, {uid}, {file_path}, {file_name}, {encoding}, {mimetype}, {url})
+            `, insert_data);
+
+            await Postgres.query(sql);
+
+            const url = `${Config.serve_at.admin}/public/${encodeURIComponent(newFilename)}`;
+            // console.log(url, uploadDir, path.resolve(uploadDir, newFilename));            
+
+            // NOTE: Serve the file for download
+            res.status(200).send({url});
+        });
+    }
+
+    /** GET　/api/admin/file/all-member-pay-record **/
+    {
+        const schema = {
+			description: '全部會員開標付款紀錄表',
+			summary: '全部會員開標付款紀錄表',
             params: {
                 type: 'object',
                 properties: {},
@@ -466,7 +731,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-		fastify.get('/file/member-pay-record', {schema}, async (req, res) => {
+		fastify.get('/file/all-member-pay-record', {schema}, async (req, res) => {
             
             const {rows:user_transition_info} = await Postgres.query<{
                 name: User['name'],

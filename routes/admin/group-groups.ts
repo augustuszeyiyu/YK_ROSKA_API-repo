@@ -610,10 +610,13 @@ export = async function(fastify: FastifyInstance) {
     
                 winner_index = Math.floor(Math.random() * candidate.length);
                 winner_candidate = candidate[winner_index];
+
             }
-            
+                // 則易FIX
+            winner_candidate.transition = 1;            
             const {T, A, transition} = cal_win_amount(handling_fee, interest_bonus, transition_fee, group_info.cycles!, group_info.basic_unit_amount!, winner_candidate.bid_amount, gid, winner_candidate.transition);
             winner_candidate.win_amount = A;
+            
             winner_candidate.transition = transition;
             console.log({winner_index, winner_candidate});
 
@@ -1047,7 +1050,7 @@ export = async function(fastify: FastifyInstance) {
                     }
                 } // for end
 
-                {
+                {             
                     const {T, A, transition} = cal_win_amount(handling_fee, transition_fee, interest_bonus, group_info.cycles, group_info.basic_unit_amount, group_info.bid_amount, gid, winner_candidate.transition);
                     const total_earn = A;
                     winner_candidate.win_amount = A;
