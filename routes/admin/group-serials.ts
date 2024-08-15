@@ -403,19 +403,33 @@ export = async function(fastify: FastifyInstance) {
 
             
             let sql_count = `
-                SELECT COUNT(*)
-                FROM roska_groups g
-                INNER JOIN roska_serials s ON s.sid = g.sid
-                WHERE NOW() > g.bid_end_time
-                GROUP BY s.sid, s.member_count
-                ORDER BY s.sid ${_order} `;
+                SWITH fiter_roska_groups AS (
+                    SELECT s.*, (
+                        SELECT (CASE WHEN g.mid <> '' THEN true ELSE false END) expired
+                        FROM roska_groups g
+                        WHERE g.sid = s.sid
+                        ORDER BY g.gid DESC
+                        LIMIT 1
+                    ) as expired
+                    FROM roska_serials s
+                )
+                SELECT COUNT(*) FROM fiter_roska_groups
+                WHERE expired = true 
+                ORDER BY sid ${_order} `;
             let sql = `
-                SELECT s.*, (CASE WHEN COUNT(g.sid) = s.member_count THEN true ELSE false END) as expired
-                FROM roska_groups g
-                INNER JOIN roska_serials s ON s.sid = g.sid
-                WHERE NOW() > g.bid_end_time
-                GROUP BY s.sid, s.member_count
-                ORDER BY s.sid ${_order} `;
+                SWITH fiter_roska_groups AS (
+                    SELECT s.*, (
+                        SELECT (CASE WHEN g.mid <> '' THEN true ELSE false END) expired
+                        FROM roska_groups g
+                        WHERE g.sid = s.sid
+                        ORDER BY g.gid DESC
+                        LIMIT 1
+                    ) as expired
+                    FROM roska_serials s
+                )
+                SELECT * FROM fiter_roska_groups
+                WHERE expired = true 
+                ORDER BY sid ${_order}	`;
             const val:any[] = [];
   
   
