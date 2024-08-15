@@ -403,7 +403,7 @@ export = async function(fastify: FastifyInstance) {
 
             
             let sql_count = `
-                WITH fiter_roska_groups AS (
+                WITH filter_roska_groups AS (
                     SELECT s.*, (
                         SELECT (CASE WHEN g.mid <> '' THEN true ELSE false END) expired
                         FROM roska_groups g
@@ -413,11 +413,11 @@ export = async function(fastify: FastifyInstance) {
                     ) as expired
                     FROM roska_serials s
                 )
-                SELECT COUNT(*) FROM fiter_roska_groups
-                WHERE expired = true 
-                ORDER BY sid ${_order} `;
+                SELECT COUNT(*) 
+                FROM filter_roska_groups
+                WHERE expired = true `;
             let sql = `
-                WITH fiter_roska_groups AS (
+                WITH filter_roska_groups AS (
                     SELECT s.*, (
                         SELECT (CASE WHEN g.mid <> '' THEN true ELSE false END) expired
                         FROM roska_groups g
@@ -427,7 +427,7 @@ export = async function(fastify: FastifyInstance) {
                     ) as expired
                     FROM roska_serials s
                 )
-                SELECT * FROM fiter_roska_groups
+                SELECT * FROM filter_roska_groups
                 WHERE expired = true 
                 ORDER BY sid ${_order}	`;
             const val:any[] = [];
