@@ -139,44 +139,48 @@ export = async function(fastify: FastifyInstance) {
                 total: number,
                 group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
             }>(`
-                SELECT DISTINCT 
-                    m.mid,
-                    m.uid,
-                    m.sid, 
-                    s.basic_unit_amount,
-                    s.cycles,
-                    m.transition,
-                    m.transit_to,
-                    COALESCE(
-                        (
-                            SELECT
-                                jsonb_agg( jsonb_build_object(
-                                    'gid', rg.gid,
-                                    'mid', rg.mid,
-								    'uid', rg.uid,
-								    'bid_end_time', rg.bid_end_time,
-                                    'win_amount', (CASE 
-                                        WHEN rg.gid = m.gid THEN rg.win_amount
-                                        WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
-                                        WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                        ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
-                                ) ORDER BY rg.gid, rg.sid)
-                            FROM 
-                                roska_groups rg
-                            WHERE 
-                                rg.sid = m.sid AND 
-                                rg.mid <> '' AND 
-                                EXTRACT(YEAR FROM bid_end_time) <= $2 AND
-                                EXTRACT(MONTH FROM bid_end_time) <= $3
-                        ), '[]'::jsonb) AS group_info
-                FROM 
-                    roska_members m
-                INNER JOIN 
-                    roska_serials s ON m.sid=s.sid
-                WHERE 
-                    m.uid = $1
-                ORDER BY 
-                    m.sid;`, [uid, year, month]);
+                WITH filter_group_info AS (
+                    SELECT DISTINCT 
+                        m.mid,
+                        m.uid,
+                        m.sid, 
+                        s.basic_unit_amount,
+                        s.cycles,
+                        m.transition,
+                        m.transit_to,
+                        COALESCE(
+                            (
+                                SELECT
+                                    jsonb_agg( jsonb_build_object(
+                                        'gid', rg.gid,
+                                        'mid', rg.mid,
+                                        'uid', rg.uid,
+                                        'bid_end_time', rg.bid_end_time,
+                                        'win_amount', (CASE 
+                                            WHEN rg.gid = m.gid THEN rg.win_amount
+                                            WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+                                            WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+                                            ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
+                                    ) ORDER BY rg.gid, rg.sid)
+                                FROM 
+                                    roska_groups rg
+                                WHERE 
+                                    rg.sid = m.sid AND 
+                                    rg.mid <> '' AND 
+                                    EXTRACT(YEAR FROM bid_end_time) <= $2 AND
+                                    EXTRACT(MONTH FROM bid_end_time) <= $3
+                            ), '[]'::jsonb) AS group_info
+                    FROM 
+                        roska_members m
+                    INNER JOIN 
+                        roska_serials s ON m.sid=s.sid
+                    WHERE 
+                        m.uid = $1
+                    ORDER BY 
+                        m.sid
+                        )
+                    select * from filter_group_info
+                    where jsonb_array_length(group_info) > 0;`, [uid, year, month]);
 
 
             return res.status(200).send(user_transition_info);
