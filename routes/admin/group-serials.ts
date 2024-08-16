@@ -290,7 +290,7 @@ export = async function(fastify: FastifyInstance) {
             let sql = `
                 SELECT u.name, s.*,
                     (
-                        SELECT json_build_object('gid', g.gid, 'mid', g.mid, 'uid', g.uid, 'name', u.name)
+                        SELECT json_build_object('gid', g.gid, 'mid', g.mid, 'uid', g.uid, 'name', u.name, 'win_amount',g.win_amount)
                         FROM roska_groups g
                         INNER JOIN users u ON g.uid = u.uid
                         WHERE sid = s.sid AND mid <> ''                        

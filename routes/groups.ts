@@ -84,67 +84,137 @@ export = async function(fastify: FastifyInstance) {
     }
     /** 各會期結算列表 **/
     {
+
+        const schema_params = {
+            type: 'object',
+            properties: {
+                year: { type: 'number' },
+                month: { type: 'number' }
+            },
+
+        };
         const schema = {
 			description: '各會期結算列表',
 			summary: '各會期結算列表',
-            params: {},
+            params: schema_params,
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get('/group/group/settlement-list', {schema}, async (req, res)=>{
+        fastify.get<{Params:{uid:string, year:number, month:number}}>('/group/group/settlement-list/:year/:month', {schema}, async (req, res)=>{
             if (req.session.is_login === false) {
                 res.errorHandler(BaseError.UNAUTHORIZED_ACCESS);
             }
 
             const {uid} = req.session.token!;
+            const {year, month} = req.params!;
+            console.log(req.params);
+            console.log({uid, year, month});
 
-            
+
             const {rows:user_transition_info} = await Postgres.query<{
                 sid:RoskaMembers['sid'], 
+                mid:RoskaMembers['mid'], 
                 basic_unit_amount: RoskaSerials['basic_unit_amount'],
                 cycles:RoskaSerials['cycles'],
+                current_cycles:number,
                 transition:RoskaMembers['transition'], 
                 transit_to:RoskaMembers['transit_to'],
                 total: number,
                 group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
             }>(`
-                SELECT DISTINCT 
-                m.mid,
-                m.uid,
-                m.sid,
-                s.basic_unit_amount,
-                s.cycles,
-                s.bid_start_time,
-                m.transition,
-                m.transit_to,
-                COALESCE(
-                    (
-                        SELECT
-                            jsonb_agg( jsonb_build_object(
-                                'gid', rg.gid, 
-                                'win_amount', (CASE 
-                                    WHEN rg.gid = m.gid THEN rg.win_amount
-                                    WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
-                                    WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
-                                    ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
-                            ) ORDER BY rg.gid, rg.sid)
-                        FROM 
-                            roska_groups rg
-                        WHERE 
-                            rg.sid = m.sid AND 
-                            rg.mid <> ''
-                    ), '[]'::jsonb) AS group_info
-                FROM 
-                    roska_members m
-                INNER JOIN 
-                    roska_serials s ON m.sid=s.sid
-                WHERE 
-                    m.mid IN (SELECT mid FROM roska_members WHERE uid = $1)
-                ORDER BY 
-                    m.sid;`, [uid]);
+                WITH filter_group_info AS (
+                    SELECT DISTINCT 
+                        m.mid,
+                        m.uid,
+                        m.sid, 
+                        s.basic_unit_amount,
+                        s.cycles,
+                        m.transition,
+                        m.transit_to,
+                        COALESCE(
+                            (
+                                SELECT
+                                    jsonb_agg( jsonb_build_object(
+                                        'gid', rg.gid,
+                                        'mid', rg.mid,
+                                        'uid', rg.uid,
+                                        'bid_end_time', rg.bid_end_time,
+                                        'win_amount', (CASE 
+                                            WHEN rg.gid = m.gid THEN rg.win_amount
+                                            WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+                                            WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+                                            ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
+                                    ) ORDER BY rg.gid, rg.sid)
+                                FROM 
+                                    roska_groups rg
+                                WHERE 
+                                    rg.sid = m.sid AND 
+                                    rg.mid <> '' AND 
+                                    EXTRACT(YEAR FROM bid_end_time) <= $2 AND
+                                    EXTRACT(MONTH FROM bid_end_time) <= $3
+                            ), '[]'::jsonb) AS group_info
+                    FROM 
+                        roska_members m
+                    INNER JOIN 
+                        roska_serials s ON m.sid=s.sid
+                    WHERE 
+                        m.uid = $1
+                    ORDER BY 
+                        m.sid
+                    )
+                    select * from filter_group_info
+                    where jsonb_array_length(group_info) > 0;`, [uid, year, month]);
 
 
             return res.status(200).send(user_transition_info);
+            
+        //     const {rows:user_transition_info} = await Postgres.query<{
+        //         sid:RoskaMembers['sid'], 
+        //         basic_unit_amount: RoskaSerials['basic_unit_amount'],
+        //         cycles:RoskaSerials['cycles'],
+        //         transition:RoskaMembers['transition'], 
+        //         transit_to:RoskaMembers['transit_to'],
+        //         total: number,
+        //         group_info: (Partial<RoskaGroups>&{win:boolean, subtotal:number})[],
+        //     }>(`
+        //         SELECT DISTINCT 
+        //         m.mid,
+        //         m.uid,
+        //         m.sid,
+        //         s.basic_unit_amount,
+        //         s.cycles,
+        //         s.bid_start_time,
+        //         m.transition,
+        //         m.transit_to,
+        //         COALESCE(
+        //             (
+        //                 SELECT
+        //                     jsonb_agg( jsonb_build_object(
+        //                         'gid', rg.gid, 
+        //                         'win_amount', (CASE 
+        //                             WHEN rg.gid = m.gid THEN rg.win_amount
+        //                             WHEN m.gid = ''     THEN -(s.basic_unit_amount - rg.bid_amount)
+        //                             WHEN rg.gid < m.gid THEN -(s.basic_unit_amount - rg.bid_amount)
+        //                             ELSE (CASE WHEN m.transition = 1 OR m.transition = 2 THEN 0 ELSE -s.basic_unit_amount END) END)
+        //                     ) ORDER BY rg.gid, rg.sid)
+        //                 FROM 
+        //                     roska_groups rg
+        //                 WHERE 
+        //                     rg.sid = m.sid AND 
+        //                     rg.mid <> ''
+        //             ), '[]'::jsonb) AS group_info
+        //         FROM 
+        //             roska_members m
+        //         INNER JOIN 
+        //             roska_serials s ON m.sid=s.sid
+        //         WHERE 
+        //             m.mid IN (SELECT mid FROM roska_members WHERE uid = $1)
+        //         ORDER BY 
+        //             m.sid;`, [uid]);
+
+
+        //     return res.status(200).send(user_transition_info);
+
         });
     }
     /** 各會期結算 **/
