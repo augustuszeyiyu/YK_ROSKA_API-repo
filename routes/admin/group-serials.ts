@@ -290,22 +290,32 @@ export = async function(fastify: FastifyInstance) {
             let sql = `
                 SELECT u.name, s.*,
                     (
-                        SELECT json_build_object('gid', g.gid, 'mid', g.mid, 'uid', g.uid, 'name', u.name, 'win_amount',g.win_amount)
+                        SELECT json_build_object(
+                            'gid', g.gid, 
+                            'mid', g.mid, 
+                            'uid', g.uid, 
+                            'name', u2.name, 
+                            'win_amount', g.win_amount,
+                            'transition', m2.transition  -- 使用 m2 来获取 transition 参数
+                        )
                         FROM roska_groups g
-                        INNER JOIN users u ON g.uid = u.uid
-                        WHERE sid = s.sid AND mid <> ''                        
-                        ORDER BY gid DESC LIMIT 1
+                        INNER JOIN users u2 ON g.uid = u2.uid
+                        INNER JOIN roska_members m2 ON m2.gid = g.gid  -- 连接 roska_members 表以获取 transition 参数
+                        WHERE g.sid = s.sid AND g.mid <> ''                        
+                        ORDER BY g.gid DESC LIMIT 1
                     ) as prev_gid, 
                     (
                         SELECT json_build_object('gid', g.gid)
                         FROM roska_groups g
-                        WHERE sid = s.sid AND mid = ''
-                        ORDER BY gid ASC LIMIT 1
+                        WHERE g.sid = s.sid AND g.mid = ''
+                        ORDER BY g.gid ASC LIMIT 1
                     ) as next_gid 
                 FROM roska_serials s
                 INNER JOIN users u ON s.uid = u.uid
-                WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time
-                ORDER BY sid ${_order} `;
+                WHERE s.bid_end_time >= NOW() AND NOW() >= s.bid_start_time
+                ORDER BY s.sid ${_order} `;
+
+
             const val:any[] = [];
   
   
@@ -424,7 +434,23 @@ export = async function(fastify: FastifyInstance) {
                         WHERE g.sid = s.sid
                         ORDER BY g.gid DESC
                         LIMIT 1
-                    ) as expired
+                    ) as expired,
+                    (
+                        SELECT json_build_object(
+                            'gid', g.gid, 
+                            'mid', g.mid, 
+                            'uid', g.uid, 
+                            'name', u2.name, 
+                            'win_amount', g.win_amount,
+                            'transition', m2.transition
+                        )
+                        FROM roska_groups g
+                        INNER JOIN users u2 ON g.uid = u2.uid
+                        INNER JOIN roska_members m2 ON m2.gid = g.gid  -- 这里需要通过 g.uid 和 m2.uid 进行连接
+                        WHERE g.sid = s.sid AND g.mid <> ''                        
+                        ORDER BY g.gid DESC 
+                        LIMIT 1
+                    ) as prev_gid
                     FROM roska_serials s
                 )
                 SELECT * FROM filter_roska_groups

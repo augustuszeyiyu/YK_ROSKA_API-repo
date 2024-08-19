@@ -357,7 +357,7 @@ export = async function(fastify: FastifyInstance) {
         fastify.post<{Body:{mids:RoskaMembers['mid'][], transition:RoskaMembers['transition']}}>('/group/member/transition', {schema}, async (req, res)=>{
             const {mids, transition:transition_after} = req.body;
             
-            if ([0, 1].includes(transition_after) === false) {
+            if ([0, 1, 2].includes(transition_after) === false) {
                 return res.errorHandler(BaseError.BAD_REQUEST, {transition_after})
             }
 
