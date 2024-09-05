@@ -28,7 +28,7 @@ export = async function(fastify: FastifyInstance) {
             security: [{ bearerAuth: [] }],
 		};
 
-        fastify.get<{Params:{sid:RoskaSerials['sid'], gid:RoskaGroups['gid']}}>('/group/member/:sid/:gid', {schema}, async (req, res)=>{
+        fastify.get<{Params:{sid:RoskaSerials['sid'], gid?:RoskaGroups['gid']}}>('/group/member/:sid/:gid', {schema}, async (req, res)=>{
             const {sid, gid} = req.params;
 
             if (sid !== undefined && (!gid || gid === 'null')) {

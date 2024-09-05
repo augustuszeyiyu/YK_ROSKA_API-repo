@@ -77,7 +77,7 @@ export = async function(fastify:FastifyInstance) {
 			if (filter_text) {
 				let sql_temp = '';
 				sql_temp += ` WHERE (`;
-				sql_temp +=	` u."name" LIKE '%${filter_text}%' `;
+				sql_temp +=	` u."name" LIKE '${filter_text}' `;
 				sql_temp += ` OR u."uid" = '${filter_text}' `;
                 sql_temp += ` OR u."contact_home_number" LIKE '${filter_text}' ) `;
                 sql_temp += ` OR u."contact_mobile_number" LIKE '${filter_text}' ) `;
