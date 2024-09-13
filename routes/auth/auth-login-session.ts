@@ -68,8 +68,8 @@ export = async function(fastify:FastifyInstance) {
 			const options = {
 				size: 6,
 				noise: 2,
-				color: true,
-				background: '#f0f0f0',
+				color: false,
+				//background: '#f0f0f0',//background: '#f0f0f0',
 				charPreset: '0123456789', // This includes only numeric characters
 			  };
 			  const captcha = svgCaptcha_create(options);
