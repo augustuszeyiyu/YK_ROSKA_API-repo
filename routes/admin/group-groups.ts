@@ -319,7 +319,8 @@ export = async function(fastify: FastifyInstance) {
                     // Add the member information to the list
                     const payload_0:Partial<RoskaGroups> = {
                          gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
-                         bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
+                         win_amount: group_serial.basic_unit_amount * group_serial.cycles, 
+                        //  bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
                          bid_start_time: new Date().toLocaleString(), 
                          win_time: new Date().toLocaleString() 
                     }                    
@@ -343,7 +344,8 @@ export = async function(fastify: FastifyInstance) {
                     if (first_bid_start_time.getMonth() === bid_start_time.getMonth()) {
                         const payload_0:Partial<RoskaGroups> = {
                             gid, sid, mid:`${sid}-00`, uid:group_serial.uid, 
-                            bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
+                            win_amount: group_serial.basic_unit_amount * group_serial.cycles, 
+                            // bid_amount: group_serial.basic_unit_amount * group_serial.cycles, 
                             bid_start_time: new Date(first_bid_start_time.getFullYear(), first_bid_start_time.getMonth(), 10).toLocaleString(), 
                             win_time: new Date().toLocaleString() 
                         }                    

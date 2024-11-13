@@ -286,7 +286,7 @@ export = async function(fastify: FastifyInstance) {
             
             let sql_count = `
                 SELECT COUNT(*) FROM roska_serials 
-                WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time;`;
+                WHERE bid_end_time >= NOW() AND NOW() >= bid_start_time AND bid_end_time > NOW() + INTERVAL '1 month';`;
             let sql = `
                 SELECT u.name, s.*,
                     (
@@ -312,7 +312,7 @@ export = async function(fastify: FastifyInstance) {
                     ) as next_gid 
                 FROM roska_serials s
                 INNER JOIN users u ON s.uid = u.uid
-                WHERE s.bid_end_time >= NOW() AND NOW() >= s.bid_start_time
+                WHERE s.bid_end_time >= NOW() AND NOW() >= s.bid_start_time AND s.bid_end_time > NOW() + INTERVAL '1 month'
                 ORDER BY s.sid ${_order} `;
 
 
@@ -360,8 +360,8 @@ export = async function(fastify: FastifyInstance) {
             `;
             console.log(sql, val, final_query);
             
-                    
-            const {rows:records} = await Postgres.query(final_query, val);
+            // final_query ->  sql       
+            const {rows:records} = await Postgres.query(sql, val);
             result.records = records;
             result.meta.total_records = total_records;
             result.meta.total_pages = Math.ceil(total_records / _PageSize);
@@ -421,7 +421,8 @@ export = async function(fastify: FastifyInstance) {
                         ORDER BY g.gid DESC
                         LIMIT 1
                     ) as expired
-                    FROM roska_serials s
+                    FROM roska_serials s 
+                    where  s.bid_end_time < NOW() + INTERVAL '1 month' --最進一期不顯示
                 )
                 SELECT COUNT(*) 
                 FROM filter_roska_groups
@@ -450,8 +451,10 @@ export = async function(fastify: FastifyInstance) {
                         WHERE g.sid = s.sid AND g.mid <> ''                        
                         ORDER BY g.gid DESC 
                         LIMIT 1
-                    ) as prev_gid
+                    ) as prev_gid                   
                     FROM roska_serials s
+                    where  s.bid_end_time < NOW() + INTERVAL '1 month'
+
                 )
                 SELECT * FROM filter_roska_groups
                 WHERE expired = true 
@@ -496,7 +499,7 @@ export = async function(fastify: FastifyInstance) {
 
             const final_query = `
                 WITH on_list_quyer AS (${sql})
-                SELECT * FROM on_list_quyer WHERE expired IS TRUE`;
+                SELECT * FROM on_list_quyer WHERE expired IS TRUE `;
             console.log(sql, val, final_query);
             
                     
