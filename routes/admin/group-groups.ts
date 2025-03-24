@@ -1212,7 +1212,7 @@ export = async function(fastify: FastifyInstance) {
         
 
         const newYear = bid_start_time.getFullYear() + yearOffset;
-        let newDate = new Date(newYear, monthInYear, 3);
+        let newDate = new Date(newYear, monthInYear, 7);
         console.log({newYear, newDate});
 
       

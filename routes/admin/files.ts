@@ -830,7 +830,7 @@ export = async function(fastify: FastifyInstance) {
                                 data['_take_all_amount'] = glm.win_amount;
                                 data[`_${glm.date}`] = glm.win_amount;
 
-                                data['_debt'] = (25 - Number(glm.gid!.substring(15))) * 5000;
+                                data['_debt'] = (24 - Number(glm.gid!.substring(15))) * 5000;
                                 break;
                             case 1:
                                 data['_transition_amount'] = glm.win_amount;
