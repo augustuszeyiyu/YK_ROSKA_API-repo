@@ -785,18 +785,18 @@ export = async function(fastify: FastifyInstance) {
             // NOTE: Initialize Excel workbook and worksheet
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet(`會員開標付款紀錄表`);
-            worksheet.views = [{ state: 'frozen', ySplit: 1, xSplit: 6 }];
+            worksheet.views = [{ state: 'frozen', ySplit: 1, xSplit: 7 }];
 
         
             // NOTE: Define columns
             const columns = [
                 { header: '會員編號', key: 'mid', width: 20 },
-                { header: '姓名',   key: 'name', width: 20 },
-                { header: '起會日', key: 'bid_start_time', width: 20 },
-                { header: '全收',   key: '_take_all_amount', width: 10 },
-                { header: '負債',   key: '_debt', width: 10 },
-                { header: '轉讓',   key: '_transition_amount', width: 10 },
-                { header: '實拿',   key: '_take_sub_amount', width: 10 },
+                { header: '姓名',   key: 'name', width: 15 },
+                { header: '起會日', key: 'bid_start_time', width: 8 },
+                { header: '全收',   key: '_take_all_amount', width: 12 },
+                { header: '預期負債',   key: '_debt', width: 12 },
+                { header: '轉讓',   key: '_transition_amount', width: 12 },
+                { header: '實拿',   key: '_take_sub_amount', width: 12 },
             ];
 
             const data_list: any[] = [];
